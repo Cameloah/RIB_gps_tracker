@@ -123,7 +123,7 @@ void gps_manager_update() {
             gpsState.prevPosAlt = gpsState.posAlt;
 
 #ifdef SYS_CONTROL_SET_MILAGE
-            long writeValue = SYS_CONTROL_SET_MILAGE * 1000000;
+            writeValue = SYS_CONTROL_SET_MILAGE * 1000000;
             EEPROM_writeAnything(12, writeValue);
             EEPROM.commit(); // commit data to flash
 
