@@ -7,7 +7,8 @@
 #include "EEPROM.h"
 
 
-//u#define SYS_CONTROL_SET_HOME_POS
+//#define SYS_CONTROL_SET_HOME_POS
+#define SYS_CONTROL_SET_MILAGE          0
 
 #define EEPROM_SIZE                     128
 #define GPS_SERIAL_BAUD_RATE            9600

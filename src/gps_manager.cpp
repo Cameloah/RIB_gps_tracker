@@ -109,7 +109,7 @@ void gps_manager_update() {
 
         // record route kilometers
         double interval_m = TinyGPSPlus::distanceBetween(gpsState.posLat, gpsState.posLon, gpsState.prevPosLat, gpsState.prevPosLon);
-        if (interval_m > INTERVAL_M) {
+        if (interval_m > INTERVAL_M && interval_m < 10000) {
             // we have passed a distance of x meters therefore save to milage
             gpsState.milage_km += interval_m / 1000.0;
             // now save to eeprom
@@ -121,6 +121,14 @@ void gps_manager_update() {
             gpsState.prevPosLat = gpsState.posLat;
             gpsState.prevPosLon = gpsState.posLon;
             gpsState.prevPosAlt = gpsState.posAlt;
+
+#ifdef SYS_CONTROL_SET_MILAGE
+            long writeValue = SYS_CONTROL_SET_MILAGE * 1000000;
+            EEPROM_writeAnything(12, writeValue);
+            EEPROM.commit(); // commit data to flash
+
+            Serial.print("Speichere neuen Kilometerstand...");
+#endif
         }
     }
 
