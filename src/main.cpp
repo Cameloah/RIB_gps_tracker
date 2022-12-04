@@ -77,7 +77,7 @@ void setup() {
     else Serial.println("Fehler.");
 
     // gps setup
-    // gps_manager_init();
+    gps_manager_init();
 }
 
 
