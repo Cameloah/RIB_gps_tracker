@@ -11,6 +11,8 @@ TinyGPSPlus gps_obj;
 HardwareSerial SerialGPS(1);
 
 uint32_t counter_serial_update = 0;
+uint32_t counter_gps_update = 0;
+long time_pos_update = 0;
 
 GpsDataState_t gpsState = {};
 
@@ -38,13 +40,13 @@ void gps_manager_init() {
     while (!SerialGPS.available())
         delay(100);
 
-    Serial.println("GPS online. Warte auf Satelliten...");
+    Serial.println("GPS online.");
     do {
         while (SerialGPS.available()) {
             gps_obj.encode(SerialGPS.read());
         }
 
-        Serial.print("Anzahl Satelliten: ");
+        Serial.print("Warte auf 5 Satelliten... Anzahl Satelliten: ");
         Serial.println(gps_obj.satellites.value());
     } while (gps_obj.satellites.value() < 5);
 
@@ -73,65 +75,79 @@ void gps_manager_init() {
     gpsState.prevPosLat = gpsState.posLat;
     gpsState.prevPosLon = gpsState.posLon;
     gpsState.prevPosAlt = gpsState.posAlt;
+    //and set the timer
+    time_pos_update = millis();
 }
 
 void gps_manager_update() {
 
-    while (SerialGPS.available() > 0) {
-        gps_obj.encode(SerialGPS.read());
-    }
+    counter_gps_update++;
+    if (counter_gps_update * 1000/FREQ_LOOP_CYCLE_HZ > INVERVAL_GPS_MEASURE_MS) {
+        counter_gps_update = 0;
 
-    // read gps coordinates from module
-    gpsState.posLat = gps_obj.location.lat();
-    gpsState.posLon = gps_obj.location.lng();
-    gpsState.posAlt = gps_obj.altitude.meters();
-
-    /*
-     * Diverse Berechnungen von Maximum und Minimum-Werten und zurückgelegter Distanz
-     * Diese werden aber erst gemacht, wenn mindestens ein Fix mit 4 Satelliten vorhanden
-     * ist, allenfalls wäre die Genauigkeit nicht gegeben und es würden falsche
-     * Werte berechnet werden.
-     */
-    if (gps_obj.satellites.value() > 4) {
-
-        // calculate direct distance to home
-        gpsState.distToOrigin = TinyGPSPlus::distanceBetween(gpsState.posLat, gpsState.posLon, gpsState.originLat, gpsState.originLon);
-
-        // keep track of maximum direct distance to home
-        if (gpsState.distToOrigin > gpsState.distToOriginMax) {
-            gpsState.distToOriginMax = gpsState.distToOrigin;
+        while (SerialGPS.available() > 0) {
+            gps_obj.encode(SerialGPS.read());
         }
 
-        // keep track of speed
-        if (gps_obj.speed.kmph() > gpsState.spdMax_kmph) {
-            gpsState.spdMax_kmph = gps_obj.speed.kmph();
-        }
+        // read gps coordinates from module
+        gpsState.posLat = gps_obj.location.lat();
+        gpsState.posLon = gps_obj.location.lng();
+        gpsState.posAlt = gps_obj.altitude.meters();
+        gpsState.spd_kmph = gps_obj.speed.kmph();
 
-        // record route kilometers
-        double interval_m = TinyGPSPlus::distanceBetween(gpsState.posLat, gpsState.posLon, gpsState.prevPosLat, gpsState.prevPosLon);
-        if (interval_m > INTERVAL_M && interval_m < 10000) {
-            // we have passed a distance of x meters therefore save to milage
-            gpsState.milage_km += interval_m / 1000.0;
-            // now save to eeprom
-            long writeValue = gpsState.milage_km * 1000000;
-            EEPROM_writeAnything(12, writeValue);
-            EEPROM.commit(); // commit data to flash
+        // for accuracy, we need at least 5 satellites
+        if (gps_obj.satellites.value() > 4) {
 
-            // and reset previous position
-            gpsState.prevPosLat = gpsState.posLat;
-            gpsState.prevPosLon = gpsState.posLon;
-            gpsState.prevPosAlt = gpsState.posAlt;
+            // calculate direct distance to home
+            gpsState.distToOrigin = TinyGPSPlus::distanceBetween(gpsState.posLat, gpsState.posLon, gpsState.originLat,
+                                                                 gpsState.originLon);
 
-#ifdef SYS_CONTROL_SET_MILAGE
-            writeValue = SYS_CONTROL_SET_MILAGE * 1000000;
-            EEPROM_writeAnything(12, writeValue);
-            EEPROM.commit(); // commit data to flash
+            // keep track of maximum direct distance to home
+            if (gpsState.distToOrigin > gpsState.distToOriginMax) {
+                gpsState.distToOriginMax = gpsState.distToOrigin;
+            }
 
-            Serial.print("Speichere neuen Kilometerstand...");
+            // keep track of speed
+            if (gpsState.spd_kmph > gpsState.spdMax_kmph) {
+                gpsState.spdMax_kmph = gpsState.spd_kmph;
+            }
+
+            // record route kilometers
+            double interval_m = TinyGPSPlus::distanceBetween(gpsState.posLat, gpsState.posLon, gpsState.prevPosLat,
+                                                             gpsState.prevPosLon);
+            if (interval_m > INTERVAL_DISTANCE_M) {
+                // we have passed a distance of x meters therefore check for validity.
+                // Therefore calculate speed from last position
+
+                long time_since_last_pos = millis() - time_pos_update;
+                double speed = interval_m / (int) time_since_last_pos;
+
+                // The boats can not go faster
+                // than 60 km/h
+                if (speed < TH_MILAGE_SPEED_MAX) {
+                    // save to milage
+                    gpsState.milage_km += INTERVAL_DISTANCE_M / 1000.0;
+
+                    // and reset previous position
+                    gpsState.prevPosLat = gpsState.posLat;
+                    gpsState.prevPosLon = gpsState.posLon;
+                    gpsState.prevPosAlt = gpsState.posAlt;
+
+                    time_pos_update = millis();
+
+#ifdef SYS_CONTROL_SAVE_MILAGE
+                    long writeValue = gpsState.milage_km * 1000000;
+                    EEPROM_writeAnything(12, writeValue);
+                    EEPROM.commit(); // commit data to flash
+
+                    Serial.print("Speichere neuen Kilometerstand...");
 #endif
+                }
+            }
         }
     }
 
+#ifdef SYS_CONTROL_VERBOSE
     /*
        Damit nicht zu viele Daten im Serial Monitor ausgegeben werden,
        beschränken wir die Ausgabe auf die Anzahl Millisekunden
@@ -143,11 +159,13 @@ void gps_manager_update() {
         Serial.print("Longitude             = ");  Serial.println(gps_obj.location.lng(), 6);
         Serial.print("Hoehe                 = ");  Serial.println(gps_obj.altitude.meters());
         Serial.print("Anzahl Satelliten     = ");  Serial.println(gps_obj.satellites.value());
-        Serial.print("Geschwindigkeit       = ");  Serial.println(gps_obj.speed.kmph());
+        Serial.print("Geschwindigkeit       = ");  Serial.println(gpsState.spd_kmph);
         Serial.print("Geschwindigkeit max   = ");  Serial.println(gpsState.spdMax_kmph);
         Serial.print("Luftlinie zu Hafen    = ");  Serial.println(gpsState.distToOrigin, 1);
         Serial.print("Luftlinie zu Hafen max= ");  Serial.println(gpsState.distToOriginMax, 1);
         Serial.print("Kilometerstand        = ");  Serial.println(gpsState.milage_km);
         counter_serial_update = 0;
     }
+#endif
+
 }

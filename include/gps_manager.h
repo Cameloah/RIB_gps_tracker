@@ -7,8 +7,9 @@
 #include "EEPROM.h"
 
 
-//#define SYS_CONTROL_SET_HOME_POS
-#define SYS_CONTROL_SET_MILAGE          0
+// #define SYS_CONTROL_SET_HOME_POS
+#define SYS_CONTROL_SAVE_MILAGE
+//#define SYS_CONTROL_VERBOSE
 
 #define EEPROM_SIZE                     128
 #define GPS_SERIAL_BAUD_RATE            9600
@@ -16,8 +17,10 @@
 #define PIN_RX                          16
 #define PIN_TX                          17
 
-#define INTERVAL_M                      100
+#define INTERVAL_DISTANCE_M             100
+#define INVERVAL_GPS_MEASURE_MS         10000
 #define INTERVAL_SERIAL_GPS_OUTPUT_MS   1000
+#define TH_MILAGE_SPEED_MAX             60.0
 
 
 struct GpsDataState_t {
@@ -32,6 +35,7 @@ struct GpsDataState_t {
     double prevPosAlt = 0;
     double distToOrigin = 0;
     double distToOriginMax = 0;
+    double spd_kmph = 0;
     double spdMax_kmph = 0;
     double milage_km = 0;
 };

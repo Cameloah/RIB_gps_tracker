@@ -14,10 +14,9 @@
 
 // debug and system control options
 #define SYSCTRL_LOOPTIMER               // enable loop frequency control, remember to also set the loop freq in the loop_timer.h
-#define INTERVAL_WIFI_CHECK_MS          30000
+#define INTERVAL_WIFI_CHECK_MS          60000
 
 WebServer server(80);
-int test = 0;
 String ip_default = "192.168.2.91";
 
 void handleRoot()
@@ -67,17 +66,18 @@ void setup() {
         else if (retval == WIFI_DEBUGGER_ERROR_NO_UPDATE)
             Serial.println("FW ist aktuell!");
         else Serial.println("Fehler.");
+
+        // since we have wifi, lets start the server
+        Serial.println("Starte Server");
+        server.on("/", handleRoot);
+        server.begin();
     }
     else if (retval == WIFI_DEBUGGER_ERROR_WIFI)
-        Serial.print("WLAN nicht gefunden.");
-    else Serial.print("Fehler.");
-
-    Serial.println("Starte Server");
-    server.on("/", handleRoot);
-    server.begin();
+        Serial.println("WLAN nicht gefunden.");
+    else Serial.println("Fehler.");
 
     // gps setup
-    gps_manager_init();
+    // gps_manager_init();
 }
 
 
@@ -88,7 +88,7 @@ void loop() {
     t_0 = micros();
 
     counter_wifi++;
-    if (!wifi_debugger_is_connected() && counter_wifi * 1000/FREQ_LOOP_CYCLE_HZ  > INTERVAL_WIFI_CHECK_MS) {
+    if (!wifi_debugger_is_connected() && (counter_wifi * 1000/FREQ_LOOP_CYCLE_HZ  > INTERVAL_WIFI_CHECK_MS)) {
         counter_wifi = 0;
 
         // try to reconnect
@@ -100,11 +100,11 @@ void loop() {
             server.begin();
         }
         if (retval == WIFI_DEBUGGER_ERROR_WIFI) {
-            Serial.print("WLAN nicht gefunden.");
+            Serial.println("WLAN nicht gefunden.");
             delay(10000);
 
         }
-        else Serial.print("Fehler.");
+        else Serial.println("Fehler.");
     }
 
     // wifi is connected so run server
@@ -115,7 +115,7 @@ void loop() {
     gps_manager_update();
 
     // handle serial commands
-// listen for user input
+    // listen for user input
     if (Serial.available())
         delay(50); // wait a bit for transfer of all serial data
     uint8_t rx_available_bytes = Serial.available();
@@ -159,7 +159,7 @@ void loop() {
                     EEPROM_writeAnything(16+i, writevalue_ip[i]);
                 }
                 EEPROM.commit();
-                Serial.print("Speichere IP...");
+                Serial.println("Speichere IP...");
                 Serial.println("Starte neu...");
                 delay(1000);
                 esp_restart();
@@ -172,7 +172,7 @@ void loop() {
                 EEPROM_writeAnything(12, writeValue);
                 EEPROM.commit(); // commit data to flash
 
-                Serial.print("Speichere neuen Kilometerstand...");
+                Serial.println("Speichere neuen Kilometerstand...");
             }
 
             else {
