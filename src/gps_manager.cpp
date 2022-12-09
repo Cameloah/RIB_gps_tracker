@@ -6,6 +6,7 @@
 #include "HardwareSerial.h"
 #include "gps_manager.h"
 #include "tools/loop_timer.h"
+#include "wifi_handler.h"
 
 TinyGPSPlus gps_obj;
 HardwareSerial SerialGPS(1);
@@ -36,21 +37,21 @@ void gps_manager_init() {
     gpsState.milage_km = (double)readValue / 1000000;
 
     // wait for gps module
-    Serial.println("Warte auf erste GPS daten...");
+    DualSerial.println("Warte auf erste GPS daten...");
     while (!SerialGPS.available())
         delay(100);
 
-    Serial.println("GPS online.");
+    DualSerial.println("GPS online.");
     do {
         while (SerialGPS.available()) {
             gps_obj.encode(SerialGPS.read());
         }
 
-        Serial.print("Warte auf 5 Satelliten... Anzahl Satelliten: ");
-        Serial.println(gps_obj.satellites.value());
+        DualSerial.print("Warte auf 5 Satelliten... Anzahl Satelliten: ");
+        DualSerial.println(gps_obj.satellites.value());
     } while (gps_obj.satellites.value() < 5);
 
-    Serial.print(gps_obj.satellites.value());  Serial.println(" Satelliten gefunden.");
+    DualSerial.print(gps_obj.satellites.value());  DualSerial.println(" Satelliten gefunden.");
 
     // read gps coordinates from module
     gpsState.posLat = gps_obj.location.lat();
@@ -59,7 +60,7 @@ void gps_manager_init() {
 
     // save home position
 #ifdef SYS_CONTROL_SET_HOME_POS
-    Serial.println("Setze Heimat-Position.");
+    DualSerial.println("Setze Heimat-Position.");
     long writeValue = gpsState.posLat * 1000000;
     EEPROM_writeAnything(0, writeValue);
 
@@ -140,7 +141,7 @@ void gps_manager_update() {
                     EEPROM_writeAnything(12, writeValue);
                     EEPROM.commit(); // commit data to flash
 
-                    Serial.print("Speichere neuen Kilometerstand...");
+                    DualSerial.print("Speichere neuen Kilometerstand...");
 #endif
                 }
             }
@@ -155,15 +156,15 @@ void gps_manager_update() {
     */
     counter_serial_update++;
     if (counter_serial_update * 1000/FREQ_LOOP_CYCLE_HZ > INTERVAL_SERIAL_GPS_OUTPUT_MS) {
-        Serial.print("Lattitude             = ");  Serial.println(gps_obj.location.lat(), 6);
-        Serial.print("Longitude             = ");  Serial.println(gps_obj.location.lng(), 6);
-        Serial.print("Hoehe                 = ");  Serial.println(gps_obj.altitude.meters());
-        Serial.print("Anzahl Satelliten     = ");  Serial.println(gps_obj.satellites.value());
-        Serial.print("Geschwindigkeit       = ");  Serial.println(gpsState.spd_kmph);
-        Serial.print("Geschwindigkeit max   = ");  Serial.println(gpsState.spdMax_kmph);
-        Serial.print("Luftlinie zu Hafen    = ");  Serial.println(gpsState.distToOrigin, 1);
-        Serial.print("Luftlinie zu Hafen max= ");  Serial.println(gpsState.distToOriginMax, 1);
-        Serial.print("Kilometerstand        = ");  Serial.println(gpsState.milage_km);
+        DualSerial.print("Lattitude             = ");  DualSerial.println(gps_obj.location.lat(), 6);
+        DualSerial.print("Longitude             = ");  DualSerial.println(gps_obj.location.lng(), 6);
+        DualSerial.print("Hoehe                 = ");  DualSerial.println(gps_obj.altitude.meters());
+        DualSerial.print("Anzahl Satelliten     = ");  DualSerial.println(gps_obj.satellites.value());
+        DualSerial.print("Geschwindigkeit       = ");  DualSerial.println(gpsState.spd_kmph);
+        DualSerial.print("Geschwindigkeit max   = ");  DualSerial.println(gpsState.spdMax_kmph);
+        DualSerial.print("Luftlinie zu Hafen    = ");  DualSerial.println(gpsState.distToOrigin, 1);
+        DualSerial.print("Luftlinie zu Hafen max= ");  DualSerial.println(gpsState.distToOriginMax, 1);
+        DualSerial.print("Kilometerstand        = ");  DualSerial.println(gpsState.milage_km);
         counter_serial_update = 0;
     }
 #endif

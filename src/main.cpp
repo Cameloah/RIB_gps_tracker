@@ -1,14 +1,18 @@
 #include <Arduino.h>
 #include <cstdio>
-#include "wifi_debugger.h"
-#include "WebServer.h"
+#include "ESPAsyncWebServer.h"
+
+#include "wifi_handler.h"
 #include "gps_manager.h"
 #include "version.h"
+#include "github_update.h"
 #include "tools/loop_timer.h"
 
 /* Changelog:
+ * - 1.1.0 added webserial support using an asynchronous web server
+ *
  * - 1.0.0 basic readout adapted from adafruit mpu6050 example
- *      display data and interface via serial comm
+ *      display data and interface via DualSerial comm
  *      calculates rot matrices from sensor to device housing and from device to ship during calibration
 */
 
@@ -16,29 +20,29 @@
 #define SYSCTRL_LOOPTIMER               // enable loop frequency control, remember to also set the loop freq in the loop_timer.h
 #define INTERVAL_WIFI_CHECK_MS          60000
 
-WebServer server(80);
-String ip_default = "192.168.2.91";
+String ip_default = "192.168.2.73";
 
-void handleRoot()
-{server.send(200, "text/html",String(gpsState.milage_km));}
+void handleRoot(AsyncWebServerRequest *request)
+{request->send(200, "text/html",String(gpsState.milage_km));
+}
 
 
 void setup() {
     delay(1000);
-    // Setup serial communication
-    Serial.begin(115200);
+    // Setup DualSerial communication
+    DualSerial.begin(115200);
 
     // init eeprom flash
-    Serial.println("Initialisiere Speichermodul...");
+    DualSerial.println("Initialisiere Speichermodul...");
     while (!EEPROM.begin(EEPROM_SIZE)) {
         continue;
     }
-    Serial.println("Erfolgreich.");
+    DualSerial.println("Erfolgreich.");
 
 
     // wifi setup
-    uint8_t retval = WIFI_DEBUGGER_ERROR_UNKNOWN;
-    Serial.println("Starte Wifi.");
+    uint8_t retval = WIFI_HANDLER_ERROR_UNKNOWN;
+    DualSerial.println("Starte Wifi.");
 
     // read ip from flash
     uint8_t readValue_ip[4];
@@ -50,31 +54,32 @@ void setup() {
         char ip_loaded[15];
         sprintf( ip_loaded, "%d.%d.%d.%d", readValue_ip[0], readValue_ip[1], readValue_ip[2], readValue_ip[3]);
         strcpy((char*)ip_default.c_str(), ip_loaded);
-        Serial.print("IP-Adresse aus Speicher geladen: ");
+        DualSerial.print("IP-Adresse aus Speicher geladen: ");
     }
-    else Serial.print("Verwende Standard-IP: ");
+    else DualSerial.print("Verwende Standard-IP: ");
 
-    Serial.println(ip_default);
+    DualSerial.println(ip_default);
 
     // start wifi
-    retval = wifi_debugger_init("WLAN", "kanustation", ip_default.c_str(), "192.168.2.1", "255.255.255.0", URL_FW_VERSION, URL_FW_BIN);
-    if(retval == WIFI_DEBUGGER_ERROR_NO_ERROR) {
-        Serial.println("Suche nach Updates...");
-        retval = wifi_debugger_fwVersionCheck(FW_VERSION_MAJOR, FW_VERSION_MINOR, FW_VERSION_PATCH);
-        if (retval == WIFI_DEBUGGER_ERROR_NO_ERROR)
-            wifi_debugger_firmwareUpdate();
-        else if (retval == WIFI_DEBUGGER_ERROR_NO_UPDATE)
-            Serial.println("FW ist aktuell!");
-        else Serial.println("Fehler.");
+    retval = wifi_handler_init("WLAN", "kanustation", ip_default.c_str(), "192.168.2.1", "255.255.255.0",
+                                URL_FW_VERSION, URL_FW_BIN);
+    if(retval == WIFI_HANDLER_ERROR_NO_ERROR) {
+        DualSerial.println("Suche nach Updates...");
+        retval = github_update_fwVersionCheck(FW_VERSION_MAJOR, FW_VERSION_MINOR, FW_VERSION_PATCH);
+        if (retval == WIFI_HANDLER_ERROR_NO_ERROR)
+            github_update_firmwareUpdate();
+        else if (retval == WIFI_HANDLER_ERROR_NO_UPDATE)
+            DualSerial.println("FW ist aktuell!");
+        else DualSerial.println("Fehler.");
 
         // since we have wifi, lets start the server
-        Serial.println("Starte Server");
-        server.on("/", handleRoot);
+        DualSerial.println("Starte Server");
+        server.on("/", HTTP_GET, handleRoot);
         server.begin();
     }
-    else if (retval == WIFI_DEBUGGER_ERROR_WIFI)
-        Serial.println("WLAN nicht gefunden.");
-    else Serial.println("Fehler.");
+    else if (retval == WIFI_HANDLER_ERROR_WIFI)
+        DualSerial.println("WLAN nicht gefunden.");
+    else DualSerial.println("Fehler.");
 
     // gps setup
     gps_manager_init();
@@ -88,41 +93,37 @@ void loop() {
     t_0 = micros();
 
     counter_wifi++;
-    if (!wifi_debugger_is_connected() && (counter_wifi * 1000/FREQ_LOOP_CYCLE_HZ  > INTERVAL_WIFI_CHECK_MS)) {
+    if (!wifi_handler_is_connected() && (counter_wifi * 1000 / FREQ_LOOP_CYCLE_HZ > INTERVAL_WIFI_CHECK_MS)) {
         counter_wifi = 0;
 
         // try to reconnect
-        uint8_t retval = connect_wifi();
-        if (retval == WIFI_DEBUGGER_ERROR_NO_ERROR) {
+        uint8_t retval = wifi_handler_connect();
+        if (retval == WIFI_HANDLER_ERROR_NO_ERROR) {
             // setup root callback to send data
-            Serial.println("WiFi wieder verbunden. Starte Server.");
+            DualSerial.println("WiFi wieder verbunden. Starte Server.");
             server.on("/", handleRoot);
             server.begin();
         }
-        if (retval == WIFI_DEBUGGER_ERROR_WIFI) {
-            Serial.println("WLAN nicht gefunden.");
+        if (retval == WIFI_HANDLER_ERROR_WIFI) {
+            DualSerial.println("WLAN nicht gefunden.");
             delay(10000);
 
         }
-        else Serial.println("Fehler.");
+        else DualSerial.println("Fehler.");
     }
-
-    // wifi is connected so run server
-    else server.handleClient();
-
 
     // always request gps and count milage
     gps_manager_update();
 
-    // handle serial commands
+    // handle DualSerial commands
     // listen for user input
-    if (Serial.available())
+    if (DualSerial.available())
         delay(50); // wait a bit for transfer of all serial data
-    uint8_t rx_available_bytes = Serial.available();
+    uint8_t rx_available_bytes = DualSerial.available();
     if (rx_available_bytes > 0) {
         // import entire string until "\n"
         char rx_user_input[rx_available_bytes];
-        Serial.readBytes(rx_user_input, rx_available_bytes);
+        DualSerial.readBytes(rx_user_input, rx_available_bytes);
 
         // extract first word as command key
         char* rx_command_key = strtok(rx_user_input, " \n");
@@ -135,9 +136,9 @@ void loop() {
             char *sub_key = strtok(nullptr, " \n");
 
             if (sub_key == nullptr) {
-                Serial.println("\nUngültiger Parameter. Mindestens einer der folgenden Parameter fehlt:");
-                Serial.println("--ip [ip-adresse]      - ändern der gespeicherten IP-Adresse");
-                Serial.println("--km [wert]            - ändern des gespeicherten km-Standes'\n");
+                DualSerial.println("\nUngültiger Parameter. Mindestens einer der folgenden Parameter fehlt:");
+                DualSerial.println("--ip [ip-adresse]      - ändern der gespeicherten IP-Adresse");
+                DualSerial.println("--km [wert]            - ändern des gespeicherten km-Standes'\n");
                 return;
             }
 
@@ -148,19 +149,19 @@ void loop() {
                 for (int i = 0; i < 4; ++i) {
                     char *sub_key = strtok(nullptr, ". \n");
                     if (sub_key == nullptr) {
-                        Serial.println("Fehler.");
+                        DualSerial.println("Fehler.");
                         return;
                     }
-                    Serial.print(writevalue_ip[i] = atoi(sub_key));
-                    Serial.println(" ");
+                    DualSerial.print(writevalue_ip[i] = atoi(sub_key));
+                    DualSerial.println(" ");
                 }
 
                 for (int i = 0; i < 4; ++i) {
                     EEPROM_writeAnything(16+i, writevalue_ip[i]);
                 }
                 EEPROM.commit();
-                Serial.println("Speichere IP...");
-                Serial.println("Starte neu...");
+                DualSerial.println("Speichere IP...");
+                DualSerial.println("Starte neu...");
                 delay(1000);
                 esp_restart();
             }
@@ -172,22 +173,22 @@ void loop() {
                 EEPROM_writeAnything(12, writeValue);
                 EEPROM.commit(); // commit data to flash
 
-                Serial.println("Speichere neuen Kilometerstand...");
+                DualSerial.println("Speichere neuen Kilometerstand...");
             }
 
             else {
                 // unknown command
-                Serial.println("\nUnbekannter Befehl.");
+                DualSerial.println("\nUnbekannter Befehl.");
             }
         }
         else {
             // unknown command
-            Serial.println("\nUnbekannter Befehl.");
+            DualSerial.println("\nUnbekannter Befehl.");
         }
 
-        // flush serial buffer
-        Serial.readString();
-        Serial << '\n';
+        // flush DualSerial buffer
+        DualSerial.readString();
+        DualSerial << '\n';
     }
 
     loop_timer++;   // iterate loop timer to track loop frequency
