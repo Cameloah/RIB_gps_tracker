@@ -125,11 +125,12 @@ void gps_manager_update() {
                 gpsState.prevPosLon = gpsState.posLon;
                 gpsState.prevPosAlt = gpsState.posAlt;
 
-                time_pos_update = millis();
-
                 // For validity calculate speed from last position
                 long time_since_last_pos = millis() - time_pos_update;
                 double speed = (interval_m / (int) time_since_last_pos) * 1000;
+
+                // update time stamp
+                time_pos_update = millis();
 
                 // The boats can not go faster
                 // than 60 km/h
