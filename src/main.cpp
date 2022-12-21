@@ -7,6 +7,7 @@
 #include "version.h"
 #include "github_update.h"
 #include "tools/loop_timer.h"
+#include "ram_log.h"
 
 /* Changelog:
  * - 1.1.0 added webserial support using an asynchronous web server
@@ -27,10 +28,25 @@ void handleRoot(AsyncWebServerRequest *request)
 }
 
 
+String ui_info() {
+    String fw_version = "\nRIB-GPS-Tracker Version: ";
+    fw_version.concat(FW_VERSION_MAJOR);
+    fw_version.concat(".");
+    fw_version.concat(FW_VERSION_MINOR);
+    fw_version.concat(".");
+    fw_version.concat(FW_VERSION_PATCH);
+    fw_version.concat("\n");
+    DualSerial.print(fw_version.c_str());
+    DualSerial.print("WLan verbunden: "); DualSerial.println(WiFi.isConnected());
+    ram_log_print_log();
+    return fw_version;
+}
+
 void setup() {
     delay(1000);
     // Setup DualSerial communication
     DualSerial.begin(115200);
+    ram_log_notify(RAM_LOG_INFO, "Start up.");
 
     // init eeprom flash
     DualSerial.println("Initialisiere Speichermodul...");
@@ -38,7 +54,6 @@ void setup() {
         continue;
     }
     DualSerial.println("Erfolgreich.");
-
 
     // wifi setup
     uint8_t retval = WIFI_HANDLER_ERROR_UNKNOWN;
@@ -132,7 +147,10 @@ void loop() {
         if (rx_command_key == nullptr)
             return;
 
-        if (!strcmp(rx_command_key, "konfiguriere")) {
+        else if (!strcmp(rx_command_key, "info"))
+            ui_info();
+
+        else if (!strcmp(rx_command_key, "konfiguriere")) {
             char *sub_key = strtok(nullptr, " \n");
 
             if (sub_key == nullptr) {

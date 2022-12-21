@@ -7,6 +7,7 @@
 #include "gps_manager.h"
 #include "tools/loop_timer.h"
 #include "wifi_handler.h"
+#include "ram_log.h"
 
 TinyGPSPlus gps_obj;
 HardwareSerial SerialGPS(1);
@@ -121,11 +122,16 @@ void gps_manager_update() {
                 // Therefore calculate speed from last position
 
                 long time_since_last_pos = millis() - time_pos_update;
-                double speed = interval_m / (int) time_since_last_pos;
+                double speed = (interval_m / (int) time_since_last_pos) * 1000;
 
                 // The boats can not go faster
                 // than 60 km/h
-                if (speed < TH_MILAGE_SPEED_MAX) {
+                if (speed < (TH_MILAGE_SPEED_MAX / 3.6)) {
+                    // log event
+                    String log = "Aktualisiere Km-Stand mit " + String(INTERVAL_DISTANCE_M) +
+                            "m. Geschw: " + String(speed) + "m/s. Echte Distanz: " + String(interval_m) + " m.";
+                    ram_log_notify(RAM_LOG_INFO, log.c_str());
+
                     // save to milage
                     gpsState.milage_km += INTERVAL_DISTANCE_M / 1000.0;
 
@@ -140,9 +146,11 @@ void gps_manager_update() {
                     long writeValue = gpsState.milage_km * 1000000;
                     EEPROM_writeAnything(12, writeValue);
                     EEPROM.commit(); // commit data to flash
-
-                    DualSerial.print("Speichere neuen Kilometerstand...");
 #endif
+                }
+                else {
+                    String log = "Fahrzeug zu schnell! Geschw: " + String(speed) + "m/s. Echte Distanz: " + String(interval_m) + " m.";
+                    ram_log_notify(RAM_LOG_INFO, log.c_str());
                 }
             }
         }

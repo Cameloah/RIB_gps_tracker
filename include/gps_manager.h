@@ -20,7 +20,7 @@
 #define INTERVAL_DISTANCE_M             200
 #define INVERVAL_GPS_MEASURE_MS         10000
 #define INTERVAL_SERIAL_GPS_OUTPUT_MS   1000
-#define TH_MILAGE_SPEED_MAX             200.0
+#define TH_MILAGE_SPEED_MAX             200.0  // km/h
 
 
 struct GpsDataState_t {
