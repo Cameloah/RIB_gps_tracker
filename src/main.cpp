@@ -10,6 +10,7 @@
 #include "ram_log.h"
 
 /* Changelog:
+ * - 1.1.2 added ram log and improved faulty measurement rejection
  * - 1.1.0 added webserial support using an asynchronous web server
  *
  * - 1.0.0 basic readout adapted from adafruit mpu6050 example
