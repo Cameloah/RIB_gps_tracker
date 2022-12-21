@@ -135,13 +135,13 @@ void gps_manager_update() {
                 // The boats can not go faster
                 // than 60 km/h
                 if (speed < (TH_MILAGE_SPEED_MAX / 3.6)) {
-                    // log event
-                    String log = "Aktualisiere Km-Stand mit " + String(INTERVAL_DISTANCE_M) +
-                            "m. Geschw: " + String(speed) + "m/s. Echte Distanz: " + String(interval_m) + " m.";
-                    ram_log_notify(RAM_LOG_INFO, log.c_str());
-
                     // save to milage
-                    gpsState.milage_km += INTERVAL_DISTANCE_M / 1000.0;
+                    gpsState.milage_km += interval_m / 1000.0;
+
+                    // log event
+                    String log = "Aktualisiere Km-Stand mit " + String(interval_m) +
+                                 "m. Geschw: " + String(speed) + "Km-Stand: " + String(gpsState.milage_km) + " km.";
+                    ram_log_notify(RAM_LOG_INFO, log.c_str());
 
 #ifdef SYS_CONTROL_SAVE_MILAGE
                     long writeValue = gpsState.milage_km * 1000000;
@@ -152,7 +152,7 @@ void gps_manager_update() {
                 else {
                     // if the speed is too large, we most likely have a faulty last measurement. relying on
                     // that position makes no sense so we update the position in any case. (done further up)
-                    String log = "Fahrzeug zu schnell! Geschw: " + String(speed) + "m/s. Echte Distanz: " + String(interval_m) + " m.";
+                    String log = "Fehler! Geschw: " + String(speed) + "m/s. Gemessene Distanz: " + String(interval_m) + " m.";
                     ram_log_notify(RAM_LOG_INFO, log.c_str());
                 }
             }
