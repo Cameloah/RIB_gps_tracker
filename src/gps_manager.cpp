@@ -117,10 +117,17 @@ void gps_manager_update() {
             // record route kilometers
             double interval_m = TinyGPSPlus::distanceBetween(gpsState.posLat, gpsState.posLon, gpsState.prevPosLat,
                                                              gpsState.prevPosLon);
+
             if (interval_m > INTERVAL_DISTANCE_M) {
                 // we have passed a distance of x meters therefore check for validity.
-                // Therefore calculate speed from last position
+                // update position anyway
+                gpsState.prevPosLat = gpsState.posLat;
+                gpsState.prevPosLon = gpsState.posLon;
+                gpsState.prevPosAlt = gpsState.posAlt;
 
+                time_pos_update = millis();
+
+                // For validity calculate speed from last position
                 long time_since_last_pos = millis() - time_pos_update;
                 double speed = (interval_m / (int) time_since_last_pos) * 1000;
 
@@ -135,13 +142,6 @@ void gps_manager_update() {
                     // save to milage
                     gpsState.milage_km += INTERVAL_DISTANCE_M / 1000.0;
 
-                    // and reset previous position
-                    gpsState.prevPosLat = gpsState.posLat;
-                    gpsState.prevPosLon = gpsState.posLon;
-                    gpsState.prevPosAlt = gpsState.posAlt;
-
-                    time_pos_update = millis();
-
 #ifdef SYS_CONTROL_SAVE_MILAGE
                     long writeValue = gpsState.milage_km * 1000000;
                     EEPROM_writeAnything(12, writeValue);
@@ -149,6 +149,8 @@ void gps_manager_update() {
 #endif
                 }
                 else {
+                    // if the speed is too large, we most likely have a faulty last measurement. relying on
+                    // that position makes no sense so we update the position in any case. (done further up)
                     String log = "Fahrzeug zu schnell! Geschw: " + String(speed) + "m/s. Echte Distanz: " + String(interval_m) + " m.";
                     ram_log_notify(RAM_LOG_INFO, log.c_str());
                 }
