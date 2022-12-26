@@ -83,7 +83,8 @@ void setup() {
     else DualSerial.println("Fehler.");
 
     // gps setup
-    gps_manager_init();
+    if (gps_manager_init() != GPS_MANAGER_ERROR_NO_ERROR)
+        DualSerial.println("Fehler beim initialisieren des GPS");
 }
 
 

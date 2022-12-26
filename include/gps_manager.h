@@ -8,8 +8,8 @@
 
 
 // #define SYS_CONTROL_SET_HOME_POS
-#define SYS_CONTROL_SAVE_MILAGE
-//#define SYS_CONTROL_VERBOSE
+// #define SYS_CONTROL_SAVE_MILAGE
+// #define SYS_CONTROL_VERBOSE
 
 #define EEPROM_SIZE                     128
 #define GPS_SERIAL_BAUD_RATE            9600
@@ -22,6 +22,11 @@
 #define INTERVAL_SERIAL_GPS_OUTPUT_MS   1000
 #define TH_MILAGE_SPEED_MAX             200.0  // km/h
 
+typedef enum{
+    GPS_MANAGER_ERROR_NO_ERROR          = 0x00,
+    GPS_MANAGER_ERROR_TIMEOUT           = 0x01,
+    GPS_MANAGER_ERROR_UNKNOWN           = 0xFF
+} GPS_MANAGER_ERROR_t;
 
 struct GpsDataState_t {
     double originLat = 0;
@@ -45,7 +50,7 @@ extern GpsDataState_t gpsState;
 /// \brief Sets up and initializes the serial communication with the gps module GY-NEO6MV2
 ///
 /// \return none
-void gps_manager_init();
+GPS_MANAGER_ERROR_t gps_manager_init();
 
 /// \brief runs update routine for the gps module
 ///
