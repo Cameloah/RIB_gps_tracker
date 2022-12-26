@@ -29,25 +29,10 @@ void handleRoot(AsyncWebServerRequest *request)
 }
 
 
-String ui_info() {
-    String fw_version = "\nRIB-GPS-Tracker Version: ";
-    fw_version.concat(FW_VERSION_MAJOR);
-    fw_version.concat(".");
-    fw_version.concat(FW_VERSION_MINOR);
-    fw_version.concat(".");
-    fw_version.concat(FW_VERSION_PATCH);
-    fw_version.concat("\n");
-    DualSerial.print(fw_version.c_str());
-    DualSerial.print("WLan verbunden: "); DualSerial.println(WiFi.isConnected());
-    ram_log_print_log();
-    return fw_version;
-}
-
 void setup() {
     delay(1000);
     // Setup DualSerial communication
     DualSerial.begin(115200);
-    ram_log_notify(RAM_LOG_INFO, "Start up.");
 
     // init eeprom flash
     DualSerial.println("Initialisiere Speichermodul...");
@@ -125,90 +110,11 @@ void loop() {
             delay(10000);
 
         }
-        else DualSerial.println("Fehler.");
+        else DualSerial.println("Fehler bei WLAN-Suche.");
     }
 
     // always request gps and count milage
     gps_manager_update();
-
-    // handle DualSerial commands
-    // listen for user input
-    if (DualSerial.available())
-        delay(50); // wait a bit for transfer of all serial data
-    uint8_t rx_available_bytes = DualSerial.available();
-    if (rx_available_bytes > 0) {
-        // import entire string until "\n"
-        char rx_user_input[rx_available_bytes];
-        DualSerial.readBytes(rx_user_input, rx_available_bytes);
-
-        // extract first word as command key
-        char* rx_command_key = strtok(rx_user_input, " \n");
-
-        // catch exception where no token was sent
-        if (rx_command_key == nullptr)
-            return;
-
-        else if (!strcmp(rx_command_key, "info"))
-            ui_info();
-
-        else if (!strcmp(rx_command_key, "konfiguriere")) {
-            char *sub_key = strtok(nullptr, " \n");
-
-            if (sub_key == nullptr) {
-                DualSerial.println("\nUngültiger Parameter. Mindestens einer der folgenden Parameter fehlt:");
-                DualSerial.println("--ip [ip-adresse]      - ändern der gespeicherten IP-Adresse");
-                DualSerial.println("--km [wert]            - ändern des gespeicherten km-Standes'\n");
-                return;
-            }
-
-            if (!strcmp(sub_key, "--ip")) {
-
-                uint8_t writevalue_ip[4];
-
-                for (int i = 0; i < 4; ++i) {
-                    char *sub_key = strtok(nullptr, ". \n");
-                    if (sub_key == nullptr) {
-                        DualSerial.println("Fehler.");
-                        return;
-                    }
-                    DualSerial.print(writevalue_ip[i] = atoi(sub_key));
-                    DualSerial.println(" ");
-                }
-
-                for (int i = 0; i < 4; ++i) {
-                    EEPROM_writeAnything(16+i, writevalue_ip[i]);
-                }
-                EEPROM.commit();
-                DualSerial.println("Speichere IP...");
-                DualSerial.println("Starte neu...");
-                delay(1000);
-                esp_restart();
-            }
-
-            else if (!strcmp(sub_key, "--km")) {
-                char *sub_key = strtok(nullptr, " \n");
-                gpsState.milage_km = atof(sub_key);
-                long writeValue = gpsState.milage_km * 1000000;
-                EEPROM_writeAnything(12, writeValue);
-                EEPROM.commit(); // commit data to flash
-
-                DualSerial.println("Speichere neuen Kilometerstand...");
-            }
-
-            else {
-                // unknown command
-                DualSerial.println("\nUnbekannter Befehl.");
-            }
-        }
-        else {
-            // unknown command
-            DualSerial.println("\nUnbekannter Befehl.");
-        }
-
-        // flush DualSerial buffer
-        DualSerial.readString();
-        DualSerial << '\n';
-    }
 
     loop_timer++;   // iterate loop timer to track loop frequency
 

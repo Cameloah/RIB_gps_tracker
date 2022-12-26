@@ -140,7 +140,7 @@ void gps_manager_update() {
 
                     // log event
                     String log = "Aktualisiere Km-Stand mit " + String(interval_m) +
-                                 "m. Geschw: " + String(speed) + "Km-Stand: " + String(gpsState.milage_km) + " km.";
+                                 "m. Geschw: " + String(speed) + ", Km-Stand: " + String(gpsState.milage_km) + " km.";
                     ram_log_notify(RAM_LOG_INFO, log.c_str());
 
 #ifdef SYS_CONTROL_SAVE_MILAGE
