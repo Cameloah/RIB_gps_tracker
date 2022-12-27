@@ -7,7 +7,7 @@
 #include "version.h"
 #include "github_update.h"
 #include "tools/loop_timer.h"
-#include "ram_log.h"
+#include "user_interface.h"
 
 /* Changelog:
  * - 1.1.2 added ram log and improved faulty measurement rejection
@@ -83,8 +83,7 @@ void setup() {
     else DualSerial.println("Fehler.");
 
     // gps setup
-    if (gps_manager_init() != GPS_MANAGER_ERROR_NO_ERROR)
-        DualSerial.println("Fehler beim initialisieren des GPS");
+    // gps_manager_init();
 }
 
 
@@ -116,6 +115,9 @@ void loop() {
 
     // always request gps and count milage
     gps_manager_update();
+
+    // listen for user input
+    ui_serial_comm_handler();
 
     loop_timer++;   // iterate loop timer to track loop frequency
 

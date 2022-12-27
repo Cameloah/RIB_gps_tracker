@@ -19,8 +19,6 @@
 
 #define INTERVAL_DISTANCE_M             200
 #define INVERVAL_GPS_MEASURE_MS         5000
-#define INTERVAL_SERIAL_GPS_OUTPUT_MS   1000
-#define TH_MILAGE_SPEED_MAX             200.0  // km/h
 
 typedef enum{
     GPS_MANAGER_ERROR_NO_ERROR          = 0x00,
@@ -29,19 +27,10 @@ typedef enum{
 } GPS_MANAGER_ERROR_t;
 
 struct GpsDataState_t {
-    double originLat = 0;
-    double originLon = 0;
-    double originAlt = 0;
     double posLat = 0;
     double posLon = 0;
-    double posAlt = 0;
     double prevPosLat = 0;
     double prevPosLon = 0;
-    double prevPosAlt = 0;
-    double distToOrigin = 0;
-    double distToOriginMax = 0;
-    double spd_kmph = 0;
-    double spdMax_kmph = 0;
     double milage_km = 0;
 };
 
@@ -50,7 +39,7 @@ extern GpsDataState_t gpsState;
 /// \brief Sets up and initializes the serial communication with the gps module GY-NEO6MV2
 ///
 /// \return none
-GPS_MANAGER_ERROR_t gps_manager_init();
+void gps_manager_init();
 
 /// \brief runs update routine for the gps module
 ///
