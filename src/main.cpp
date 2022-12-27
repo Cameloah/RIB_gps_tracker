@@ -84,6 +84,8 @@ void setup() {
 
     // gps setup
     gps_manager_init();
+
+    DualSerial.println("Einsatzbereit!");
 }
 
 

@@ -34,7 +34,9 @@ GPS_MANAGER_ERROR_t _update_pos(unsigned long timeout, uint8_t sats) {
             gps_obj.encode(SerialGPS.read());
 
         // check for satellites
-        if (gps_obj.satellites.isValid() && gps_obj.satellites.value() <= sats) {
+        if (gps_obj.satellites.isValid() && sats <= gps_obj.satellites.value()) {
+            // update number of satellites
+            gpsState.numberSats = gps_obj.satellites.value();
             // check for validity
             if (gps_obj.location.isValid() && gps_obj.location.isUpdated()) {
                 // measurement is valid and fresh, therefore save position
@@ -49,25 +51,6 @@ GPS_MANAGER_ERROR_t _update_pos(unsigned long timeout, uint8_t sats) {
     return GPS_MANAGER_ERROR_TIMEOUT;
 }
 
-GPS_MANAGER_ERROR_t _update_pos(uint8_t sats) {
-    while (true) {
-        // pull data
-        while (SerialGPS.available())
-            gps_obj.encode(SerialGPS.read());
-
-        // check for satellites
-        if (gps_obj.satellites.isValid() && gps_obj.satellites.value() <= sats) {
-            // check for validity
-            if (gps_obj.location.isValid() && gps_obj.location.isUpdated()) {
-                // measurement is valid and fresh, therefore save position
-                gpsState.posLat = gps_obj.location.lat();
-                gpsState.posLon = gps_obj.location.lng();
-                // all done, so return out of loop
-                return GPS_MANAGER_ERROR_NO_ERROR;
-            }
-        }
-    }
-}
 
 void gps_manager_init() {
     // init serial communication with gps module
@@ -85,13 +68,7 @@ void gps_manager_init() {
     while (!SerialGPS.available())
         delay(100);
 
-    DualSerial.println("GPS online. Warte auf Satelliten...");
-    // lets try to measure position. this runs forever
-    _update_pos(4);
-
-    // and reset previous position
-    gpsState.prevPosLat = gpsState.posLat;
-    gpsState.prevPosLon = gpsState.posLon;
+    DualSerial.println("GPS online.");
 }
 
 void gps_manager_update() {
@@ -105,8 +82,17 @@ void gps_manager_update() {
         counter_gps_update = 0;
 
         // read gps coordinates from module
-        if (_update_pos(500, 4) == GPS_MANAGER_ERROR_NO_ERROR) {
-            // we have a valid measurement so lets calculate route kilometers
+        if (_update_pos(5000, 4) == GPS_MANAGER_ERROR_NO_ERROR) {
+            // we have a valid measurement so lets check whether we have a previous measurement
+            if (gpsState.prevPosLat == 0 || gpsState.prevPosLon == 0) {
+                // we don't have prev measurements yet so lets save them
+                gpsState.prevPosLat = gpsState.posLat;
+                gpsState.prevPosLon = gpsState.posLon;
+                // and return early
+                return;
+            }
+
+            // calculate route kilometers
             double interval_m = TinyGPSPlus::distanceBetween(gpsState.posLat, gpsState.posLon, gpsState.prevPosLat,
                                                              gpsState.prevPosLon);
 

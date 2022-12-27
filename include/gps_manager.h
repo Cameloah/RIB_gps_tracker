@@ -32,6 +32,7 @@ struct GpsDataState_t {
     double prevPosLat = 0;
     double prevPosLon = 0;
     double milage_km = 0;
+    uint8_t numberSats = 0;
 };
 
 extern GpsDataState_t gpsState;

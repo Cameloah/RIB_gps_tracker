@@ -64,16 +64,12 @@ void ui_config() {
 }
 
 String ui_info() {
-    String fw_version = "\nRIB-GPS-Tracker Version: ";
-    fw_version.concat(FW_VERSION_MAJOR);
-    fw_version.concat(".");
-    fw_version.concat(FW_VERSION_MINOR);
-    fw_version.concat(".");
-    fw_version.concat(FW_VERSION_PATCH);
-    fw_version.concat("\n");
-    DualSerial.print(fw_version.c_str());
-    DualSerial.print("WLan verbunden: ");
-    DualSerial.println(WiFi.isConnected());
+    String fw_version = "\nRIB-GPS-Tracker Version: " + String(FW_VERSION_MAJOR) + "."+ String(FW_VERSION_MINOR) + "." + String(FW_VERSION_PATCH);
+    DualSerial.println(fw_version.c_str());
+    DualSerial.print("WLan verbunden:    "); DualSerial.println((bool) WiFi.isConnected());
+    String str_pos = "Aktuelle Position: " + String(gpsState.posLat) + "° Nord, " + String(gpsState.posLon) + "° Ost";
+    DualSerial.println(str_pos.c_str());
+    DualSerial.print("Anzahl Satelliten: "); DualSerial.println(gpsState.numberSats);
     ram_log_print_log();
     return fw_version;
 }
