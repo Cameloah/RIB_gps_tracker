@@ -35,8 +35,14 @@ GPS_MANAGER_ERROR_t _update_pos(unsigned long timeout, uint8_t sats) {
 
         // check for satellites
         if (gps_obj.satellites.isValid() && sats <= gps_obj.satellites.value()) {
+            // notify ramlog
+            if (sats > gpsState.numberSats) {
+                String str_log = "Satelliten-Genauigkeit hergestellt. Satelliten: " + String(gps_obj.satellites.value());
+            }
+
             // update number of satellites
             gpsState.numberSats = gps_obj.satellites.value();
+
             // check for validity
             if (gps_obj.location.isValid() && gps_obj.location.isUpdated()) {
                 // measurement is valid and fresh, therefore save position
@@ -48,7 +54,9 @@ GPS_MANAGER_ERROR_t _update_pos(unsigned long timeout, uint8_t sats) {
         }
     } while (millis() - start < timeout);
     // we timeouted. the position measurement is not valid
-    return GPS_MANAGER_ERROR_TIMEOUT;
+    if (gpsState.numberSats < sats)
+        return GPS_MANAGER_ERROR_SATS;
+    return GPS_MANAGER_ERROR_LOCATION;
 }
 
 
@@ -81,8 +89,9 @@ void gps_manager_update() {
     if (counter_gps_update * 1000 / FREQ_LOOP_CYCLE_HZ > INVERVAL_GPS_MEASURE_MS) {
         counter_gps_update = 0;
 
+        GPS_MANAGER_ERROR_t retval;
         // read gps coordinates from module
-        if (_update_pos(5000, 4) == GPS_MANAGER_ERROR_NO_ERROR) {
+        if ((retval = _update_pos(5000, 4)) == GPS_MANAGER_ERROR_NO_ERROR) {
             // we have a valid measurement so lets check whether we have a previous measurement
             if (gpsState.prevPosLat == 0 || gpsState.prevPosLon == 0) {
                 // we don't have prev measurements yet so lets save them
@@ -117,6 +126,11 @@ void gps_manager_update() {
                 EEPROM.commit(); // commit data to flash
 #endif
             }
+        }
+
+        else if (retval == GPS_MANAGER_ERROR_SATS) {
+            String str_log = "Satelliten-Genauigkeit verloren. Satelliten: " + String(gpsState.numberSats);
+            ram_log_notify(RAM_LOG_INFO, str_log.c_str());
         }
     }
 }

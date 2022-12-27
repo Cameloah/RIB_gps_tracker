@@ -7,9 +7,7 @@
 #include "EEPROM.h"
 
 
-// #define SYS_CONTROL_SET_HOME_POS
-// #define SYS_CONTROL_SAVE_MILAGE
-// #define SYS_CONTROL_VERBOSE
+#define SYS_CONTROL_SAVE_MILAGE
 
 #define EEPROM_SIZE                     128
 #define GPS_SERIAL_BAUD_RATE            9600
@@ -22,7 +20,8 @@
 
 typedef enum{
     GPS_MANAGER_ERROR_NO_ERROR          = 0x00,
-    GPS_MANAGER_ERROR_TIMEOUT           = 0x01,
+    GPS_MANAGER_ERROR_LOCATION          = 0x01,
+    GPS_MANAGER_ERROR_SATS              = 0x02,
     GPS_MANAGER_ERROR_UNKNOWN           = 0xFF
 } GPS_MANAGER_ERROR_t;
 
