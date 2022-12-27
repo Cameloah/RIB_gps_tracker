@@ -83,7 +83,7 @@ void setup() {
     else DualSerial.println("Fehler.");
 
     // gps setup
-    // gps_manager_init();
+    gps_manager_init();
 }
 
 
