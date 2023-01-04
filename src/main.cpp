@@ -8,6 +8,7 @@
 #include "github_update.h"
 #include "tools/loop_timer.h"
 #include "user_interface.h"
+#include "ram_log.h"
 
 /* Changelog:
  * - 1.1.2 added ram log and improved faulty measurement rejection
@@ -36,9 +37,7 @@ void setup() {
 
     // init eeprom flash
     DualSerial.println("Initialisiere Speichermodul...");
-    while (!EEPROM.begin(EEPROM_SIZE)) {
-        continue;
-    }
+    while (!EEPROM.begin(EEPROM_SIZE)) {}
     DualSerial.println("Erfolgreich.");
 
     // wifi setup
@@ -67,20 +66,27 @@ void setup() {
     if(retval == WIFI_HANDLER_ERROR_NO_ERROR) {
         DualSerial.println("Suche nach Updates...");
         retval = github_update_fwVersionCheck(FW_VERSION_MAJOR, FW_VERSION_MINOR, FW_VERSION_PATCH);
-        if (retval == WIFI_HANDLER_ERROR_NO_ERROR)
+        if (retval == GITHUB_UPDATE_ERROR_NO_ERROR)
             github_update_firmwareUpdate();
-        else if (retval == WIFI_HANDLER_ERROR_NO_UPDATE)
+        else if (retval == GITHUB_UPDATE_ERROR_NO_UPDATE)
             DualSerial.println("FW ist aktuell!");
-        else DualSerial.println("Fehler.");
+        else {
+            DualSerial.println("Fehler.");
+            ram_log_notify(RAM_LOG_ERROR_GITHUB_UPDATE, retval);
+        }
 
         // since we have wifi, lets start the server
-        DualSerial.println("Starte Server");
+        ram_log_notify(RAM_LOG_INFO, "Starte Server", true);
         server.on("/", HTTP_GET, handleRoot);
         server.begin();
     }
-    else if (retval == WIFI_HANDLER_ERROR_WIFI)
+    else if (retval == WIFI_HANDLER_ERROR_CONNECT) {
         DualSerial.println("WLAN nicht gefunden.");
-    else DualSerial.println("Fehler.");
+        ram_log_notify(RAM_LOG_ERROR_WIFI_HANDLER, retval);
+    }
+    else {
+        ram_log_notify(RAM_LOG_ERROR_WIFI_HANDLER, retval);
+        DualSerial.println("Fehler."); }
 
     // gps setup
     gps_manager_init();
@@ -103,16 +109,19 @@ void loop() {
         uint8_t retval = wifi_handler_connect();
         if (retval == WIFI_HANDLER_ERROR_NO_ERROR) {
             // setup root callback to send data
-            DualSerial.println("WiFi wieder verbunden. Starte Server.");
+            ram_log_notify(RAM_LOG_INFO, "WiFi wieder verbunden. Starte Server.", true);
             server.on("/", handleRoot);
             server.begin();
         }
-        if (retval == WIFI_HANDLER_ERROR_WIFI) {
+        else if (retval == WIFI_HANDLER_ERROR_CONNECT) {
             DualSerial.println("WLAN nicht gefunden.");
             delay(10000);
 
         }
-        else DualSerial.println("Fehler bei WLAN-Suche.");
+        else {
+            DualSerial.println("Fehler bei WLAN-Suche.");
+            ram_log_notify(RAM_LOG_ERROR_WIFI_HANDLER, retval);
+        }
     }
 
     // always request gps and count milage
