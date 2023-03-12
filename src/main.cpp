@@ -61,7 +61,7 @@ void setup() {
     DualSerial.println(ip_default);
 
     // start wifi
-    retval = wifi_handler_init("WLAN", "kanustation", ip_default.c_str(), "192.168.2.1", "255.255.255.0",
+    retval = wifi_handler_init("Kanustation", "kanustation", ip_default.c_str(), "192.168.2.1", "255.255.255.0",
                                 URL_FW_VERSION, URL_FW_BIN);
     if(retval == WIFI_HANDLER_ERROR_NO_ERROR) {
         DualSerial.println("Suche nach Updates...");
