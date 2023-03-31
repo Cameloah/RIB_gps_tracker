@@ -31,8 +31,8 @@ void setup() {
     if(retval == WIFI_HANDLER_ERROR_NO_ERROR) {
         // since we have Wi-Fi, lets start the server
         ram_log_notify(RAM_LOG_INFO, "Starte Server", true);
-        server_custom.on("/", HTTP_GET, handleRoot);
-        server_custom.begin();
+        server.on("/", HTTP_GET, handleRoot);
+        server.begin();
     }
     else if (retval == WIFI_HANDLER_ERROR_CONNECT) {
         DualSerial.println("WLAN nicht gefunden.");
@@ -61,8 +61,8 @@ void loop() {
         if (retval == WIFI_HANDLER_ERROR_NO_ERROR) {
             // setup root callback to send data
             ram_log_notify(RAM_LOG_INFO, "WiFi wieder verbunden. Starte Server.", true);
-            server_custom.on("/", handleRoot);
-            server_custom.begin();
+            server.on("/", handleRoot);
+            server.begin();
         }
         else if (retval == WIFI_HANDLER_ERROR_CONNECT) {
             DualSerial.println("WLAN nicht gefunden.");
