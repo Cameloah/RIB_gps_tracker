@@ -25,8 +25,7 @@ void setup() {
     DualSerial.begin(115200);
 
     // wifi setup
-    uint8_t retval = wifi_handler_init("Free WiFi2.4", "IschMirDochGlich1", "no_static_ip", "192.168.0.1", "255.255.255.0",
-                                URL_FW_VERSION, URL_FW_BIN);
+    uint8_t retval = wifi_handler_init(URL_FW_VERSION, URL_FW_BIN);
 
     if(retval == WIFI_HANDLER_ERROR_NO_ERROR) {
         // since we have Wi-Fi, lets start the server
