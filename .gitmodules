@@ -1,3 +1,0 @@
-[submodule "lib/common_lib_wifi_debugger"]
-	path = lib/common_lib_wifi_debugger
-	url = git@github.com:Cameloah/common_lib_wifi_debugger.git
