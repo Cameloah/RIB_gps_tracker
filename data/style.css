@@ -1,45 +1,45 @@
 html {
-  font-family: Arial, Helvetica, sans-serif; 
-  display: inline-block; 
+  font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;
+  display: inline-block;
   text-align: center;
 }
 
 h1 {
-  font-size: 1.8rem; 
-  color: white;
+  font-size: 1.8rem;
+  color: black;
 }
 
-p { 
+p {
   font-size: 1.4rem;
 }
 
-.topnav { 
-  overflow: hidden; 
-  background-color: #0A1128;
+.topnav {
+  overflow: hidden;
+  background-color: white;
 }
 
-body {  
+body {
   margin: 0;
 }
 
-.content { 
+.content {
   padding: 5%;
 }
 
-.card-grid { 
-  max-width: 800px; 
-  margin: 0 auto; 
-  display: grid; 
-  grid-gap: 2rem; 
+.card-grid {
+  max-width: 800px;
+  margin: 0 auto;
+  display: grid;
+  grid-gap: 2rem;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 }
 
-.card { 
-  background-color: white; 
+.card {
+  background-color: white;
   box-shadow: 2px 2px 12px 1px rgba(140,140,140,.5);
 }
 
-.card-title { 
+.card-title {
   font-size: 1.2rem;
   font-weight: bold;
   color: #034078
@@ -48,7 +48,7 @@ body {
 input[type=submit] {
   border: none;
   color: #FEFCFB;
-  background-color: #034078;
+  background-color: #007bff;
   padding: 15px 15px;
   text-align: center;
   text-decoration: none;
@@ -58,7 +58,7 @@ input[type=submit] {
   margin-right: 10px;
   border-radius: 4px;
   transition-duration: 0.4s;
-  }
+}
 
 input[type=submit]:hover {
   background-color: #1282A2;
@@ -67,24 +67,27 @@ input[type=submit]:hover {
 input[type=text], input[type=number], select {
   width: 50%;
   padding: 12px 20px;
-  margin: 18px;
-  display: inline-block;
+  margin: 0 auto;
+  display: block;
   border: 1px solid #ccc;
   border-radius: 4px;
   box-sizing: border-box;
 }
 
 label {
-  font-size: 1.2rem; 
+  font-size: 1.2rem;
 }
+
 .value{
   font-size: 1.2rem;
-  color: #1282A2;  
+  color: #1282A2;
 }
+
 .state {
   font-size: 1.2rem;
   color: #1282A2;
 }
+
 button {
   border: none;
   color: #FEFCFB;
@@ -95,15 +98,62 @@ button {
   border-radius: 4px;
   transition-duration: 0.4s;
 }
+
 .button-on {
   background-color: #034078;
 }
+
 .button-on:hover {
   background-color: #1282A2;
 }
+
 .button-off {
   background-color: #858585;
 }
+
 .button-off:hover {
   background-color: #252524;
-} 
+}
+
+.burger-menu {
+  display: block;
+  cursor: pointer;
+  padding: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.burger-menu span {
+  display: block;
+  width: 25px;
+  height: 3px;
+  margin-bottom: 5px;
+  position: relative;
+  background: #000;
+  border-radius: 3px;
+  z-index: 2;
+}
+
+.menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.8);
+  z-index: 1;
+  display: none;
+}
+
+.menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.menu li
