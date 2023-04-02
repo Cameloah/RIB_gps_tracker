@@ -15,6 +15,7 @@
 String ui_info() {
     String fw_version = "\nFirmware Version:   " + String(FW_VERSION_MAJOR) + "."+ String(FW_VERSION_MINOR) + "." + String(FW_VERSION_PATCH);
     DualSerial.println(fw_version.c_str());
+    DualSerial.print("Wlan Modus:         "); DualSerial.println(wifi_handler_get_mode());
     DualSerial.print("WLan verbunden:     "); DualSerial.println(WiFi.isConnected() ? "ja" : "nein");
     DualSerial.print("IP-Adresse:         "); DualSerial.println(WiFi.localIP().toString());
     ram_log_print_log();
