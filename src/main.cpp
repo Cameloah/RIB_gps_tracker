@@ -25,9 +25,20 @@ void setup() {
     DualSerial.begin(115200);
 
     // wifi setup
-    uint8_t retval = wifi_handler_init(URL_FW_VERSION, URL_FW_BIN);
+    uint8_t retval = wifi_handler_init();
 
     if(retval == WIFI_HANDLER_ERROR_NO_ERROR) {
+        DualSerial.println("Suche nach Updates...");
+        retval = github_update_checkforlatest();
+        if (retval == GITHUB_UPDATE_ERROR_NO_ERROR)
+            github_update_firmwareUpdate();
+        else if (retval == GITHUB_UPDATE_ERROR_NO_UPDATE)
+            DualSerial.println("FW ist aktuell!");
+        else {
+            DualSerial.println("Fehler.");
+            ram_log_notify(RAM_LOG_ERROR_GITHUB_UPDATE, retval);
+        }
+
         // since we have Wi-Fi, lets start the server
         ram_log_notify(RAM_LOG_INFO, "Starte Server", true);
         server.on("/", HTTP_GET, handleRoot);
@@ -42,6 +53,9 @@ void setup() {
         DualSerial.println("Fehler."); }
 
     DualSerial.println("Einsatzbereit!");
+    DualSerial.println(URL_FW_VERSION);
+    DualSerial.println(URL_FW_BIN);
+    DualSerial.println(URL_FS_BIN);
 }
 
 
