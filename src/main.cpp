@@ -3,6 +3,7 @@
 #include "ESPAsyncWebServer.h"
 
 #include "wifi_handler.h"
+#include "gps_manager.h"
 #include "version.h"
 #include "github_update.h"
 #include "tools/loop_timer.h"
@@ -15,7 +16,7 @@
 #define INTERVAL_WIFI_CHECK_MS          60000
 
 void handleRoot(AsyncWebServerRequest *request)
-{request->send(200, "text/html","blabliblubb");
+{request->send(200, "text/html",String(gpsState.milage_km));
 }
 
 
@@ -24,7 +25,15 @@ void setup() {
     // Setup DualSerial communication
     DualSerial.begin(115200);
 
+    // init eeprom flash
+    DualSerial.println("Initialisiere Speichermodul...");
+    while (!EEPROM.begin(EEPROM_SIZE)) {}
+    DualSerial.println("Erfolgreich.");
+
     // wifi setup
+    DualSerial.println("Starte Wifi...");
+    wifi_info_buffer.ap_name = "Neuer GPS-Tracker";
+    wifi_info_buffer.device_name = "GPS Boot ";
     uint8_t retval = wifi_handler_init();
 
     if(retval == WIFI_HANDLER_ERROR_NO_ERROR) {
@@ -52,10 +61,10 @@ void setup() {
         ram_log_notify(RAM_LOG_ERROR_WIFI_HANDLER, retval);
         DualSerial.println("Fehler."); }
 
+    // gps setup
+    gps_manager_init();
+
     DualSerial.println("Einsatzbereit!");
-    DualSerial.println(URL_FW_VERSION);
-    DualSerial.println(URL_FW_BIN);
-    DualSerial.println(URL_FS_BIN);
 }
 
 
@@ -87,6 +96,9 @@ void loop() {
             ram_log_notify(RAM_LOG_ERROR_WIFI_HANDLER, retval);
         }
     }
+
+    // always request gps and count milage
+    gps_manager_update();
 
     // run wifi server routine
     wifi_handler_update();
