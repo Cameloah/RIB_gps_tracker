@@ -11,6 +11,7 @@
 #include "ram_log.h"
 #include "webserial_monitor.h"
 #include "version.h"
+#include "github_update.h"
 
 void ui_config() {
     char *sub_key = strtok(nullptr, " \n");
@@ -82,11 +83,29 @@ void ui_debug() {
     if (sub_key == nullptr) {
         DualSerial.print("\nUngültiger Befehl. Mindestens einer der folgenden Parameter fehlt:\n"
                "debug --reboot              - Neustarten des Geräts\n\n");
-    } else if (!strcmp(sub_key, "--reboot")) {
+    }
+
+    else if (!strcmp(sub_key, "--reboot")) {
         DualSerial.println("Starte neu...");
         delay(1000);
         esp_restart();
     }
+
+    else if(!strcmp(sub_key, "--update")) {
+        sub_key = strtok(nullptr, " \n");
+
+        if (sub_key == nullptr)
+            strcpy(sub_key, "");
+
+        else if (!strcmp(sub_key, "--version")) {
+
+            sub_key = strtok(nullptr, " \n");
+
+            github_update_firmwareUpdate(sub_key);
+            Serial.println("Update fehlgeschlagen.");
+            return;
+        }
+
 
     else {
         DualSerial.print("\nUngültiger Befehl. Mindestens einer der folgenden Parameter fehlt:\n"

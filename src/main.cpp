@@ -36,9 +36,6 @@ void setup() {
     wifi_info_buffer.device_name = "GPS Boot ";
     uint8_t retval = wifi_handler_init();
 
-    // since version v2.0.0 spiffs image needs to be downloaded. We do this in this version initially
-    github_update_firmwareUpdate("v2.0.0");
-
     if(retval == WIFI_HANDLER_ERROR_NO_ERROR) {
         DualSerial.println("Suche nach Updates...");
         retval = github_update_checkforlatest();
