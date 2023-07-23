@@ -64,7 +64,7 @@ void setup() {
     retval = wifi_handler_init("Kanustation", "kanustation", ip_default.c_str(), "192.168.2.1", "255.255.255.0");
     if(retval == WIFI_HANDLER_ERROR_NO_ERROR) {
         DualSerial.println("Suche nach Updates...");
-        retval = github_update_fwVersionCheck(FW_VERSION_MAJOR, FW_VERSION_MINOR, FW_VERSION_PATCH);
+        retval = github_update_checkforlatest();
         if (retval == GITHUB_UPDATE_ERROR_NO_ERROR)
             github_update_firmwareUpdate();
         else if (retval == GITHUB_UPDATE_ERROR_NO_UPDATE)
