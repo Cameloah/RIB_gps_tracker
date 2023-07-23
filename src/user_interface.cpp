@@ -91,7 +91,7 @@ void ui_debug() {
         esp_restart();
     }
 
-    else if(!strcmp(sub_key, "--update")) {
+    else if (!strcmp(sub_key, "--update")) {
         sub_key = strtok(nullptr, " \n");
 
         if (sub_key == nullptr)
@@ -105,7 +105,7 @@ void ui_debug() {
             Serial.println("Update fehlgeschlagen.");
             return;
         }
-
+    }
 
     else {
         DualSerial.print("\nUngültiger Befehl. Mindestens einer der folgenden Parameter fehlt:\n"
