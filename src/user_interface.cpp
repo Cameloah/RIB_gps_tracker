@@ -1,5 +1,5 @@
 //
-// Created by koorj on 19.01.2022.
+// Created by Camleoah on 19.01.2022.
 //
 
 
@@ -11,6 +11,7 @@
 #include "ram_log.h"
 #include "webserial_monitor.h"
 #include "version.h"
+#include "github_update.h"
 
 void ui_config() {
     char *sub_key = strtok(nullptr, " \n");
@@ -64,15 +65,15 @@ void ui_config() {
 }
 
 String ui_info() {
-    String fw_version = "\nRIB-GPS-Tracker Version: " + String(FW_VERSION_MAJOR) + "."+ String(FW_VERSION_MINOR) + "." + String(FW_VERSION_PATCH);
+    String fw_version = "\nFirmware Version:   " + String(FW_VERSION_MAJOR) + "."+ String(FW_VERSION_MINOR) + "." + String(FW_VERSION_PATCH);
     DualSerial.println(fw_version.c_str());
+    DualSerial.print("Wlan Modus:         "); DualSerial.println(wifi_handler_get_mode());
     DualSerial.print("WLan verbunden:     "); DualSerial.println(WiFi.isConnected() ? "ja" : "nein");
-    DualSerial.print("IP-Adresse:         "); DualSerial.println(WiFi.localIP());
+    DualSerial.print("IP-Adresse:         "); DualSerial.println(WiFi.localIP().toString());
     DualSerial.print("Aktueller km-Stand: "); DualSerial.println(gpsState.milage_km);
     String str_pos = "Aktuelle Position:  " + String(gpsState.posLat) + "° Nord, " + String(gpsState.posLon) + "° Ost";
     DualSerial.println(str_pos.c_str());
-    DualSerial.print("Anzahl Satelliten:  "); DualSerial.println(gpsState.numberSats);
-    ram_log_print_log();
+    DualSerial.print("Anzahl Satelliten:  "); DualSerial.println(gpsState.numberSats);ram_log_print_log();
     return fw_version;
 }
 
@@ -82,10 +83,28 @@ void ui_debug() {
     if (sub_key == nullptr) {
         DualSerial.print("\nUngültiger Befehl. Mindestens einer der folgenden Parameter fehlt:\n"
                "debug --reboot              - Neustarten des Geräts\n\n");
-    } else if (!strcmp(sub_key, "--reboot")) {
+    }
+
+    else if (!strcmp(sub_key, "--reboot")) {
         DualSerial.println("Starte neu...");
         delay(1000);
         esp_restart();
+    }
+
+    else if (!strcmp(sub_key, "--update")) {
+        sub_key = strtok(nullptr, " \n");
+
+        if (sub_key == nullptr)
+            strcpy(sub_key, "");
+
+        else if (!strcmp(sub_key, "--version")) {
+
+            sub_key = strtok(nullptr, " \n");
+
+            github_update_firmwareUpdate(sub_key);
+            Serial.println("Update fehlgeschlagen.");
+            return;
+        }
     }
 
     else {
