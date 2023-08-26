@@ -1,5 +1,5 @@
 //
-// Created by Jo Uni on 29/10/2022.
+// Created by Camleoah on 29/10/2022.
 //
 
 #include "TinyGPSPlus.h"
@@ -11,6 +11,7 @@
 
 TinyGPSPlus gps_obj;
 HardwareSerial SerialGPS(1);
+bool flag_initialized = false;
 
 uint32_t counter_gps_update = 0;
 
@@ -61,8 +62,7 @@ GPS_MANAGER_ERROR_t _update_pos(unsigned long timeout, uint8_t sats) {
 
 
 void gps_manager_init() {
-    // init serial communication with gps module
-    SerialGPS.begin(GPS_SERIAL_BAUD_RATE, SERIAL_8N1, PIN_RX, PIN_TX);
+    GPS_MANAGER_ERROR_t retval = GPS_MANAGER_ERROR_UNKNOWN;
 
 #ifdef SYS_CONTROL_SAVE_MILAGE
     // read milage from flash
@@ -71,15 +71,38 @@ void gps_manager_init() {
     gpsState.milage_km = (double)readValue / 1000000;
 #endif
 
-    // wait for gps module
-    DualSerial.println("Warte auf erste GPS daten...");
-    while (!SerialGPS.available())
-        delay(100);
+    // initialize gps module
+    DualSerial.println("Initialisiere GPS-Modul...");
+    if((retval = gps_module_init(GPS_INIT_TIMEOUT)) == GPS_MANAGER_ERROR_NO_ERROR)
+        flag_initialized = true;
 
-    DualSerial.println("GPS online.");
+    else {
+        DualSerial.println("Fehler. GPS-Modul antwortet nicht. Neuversuch laeuft im Hintergrund.");
+        ram_log_notify(RAM_LOG_ERROR_GPS_MANAGER, retval); }
+}
+
+GPS_MANAGER_ERROR_t gps_module_init(unsigned long timeout) {
+    // init serial communication with gps module
+    SerialGPS.begin(GPS_SERIAL_BAUD_RATE, SERIAL_8N1, PIN_RX, PIN_TX);
+
+    unsigned long start = millis();
+    do {
+        if (SerialGPS.available()) {
+            ram_log_notify( RAM_LOG_INFO,"GPS online.", true);
+            flag_initialized = true;
+            return GPS_MANAGER_ERROR_NO_ERROR;
+        }
+        delay(100);
+    } while (millis() - timeout < start);
+
+    return GPS_MANAGER_ERROR_TIMEOUT;
 }
 
 void gps_manager_update() {
+    // if not initialized, try again
+    if (!flag_initialized)
+        if (gps_module_init(GPS_INIT_TIMEOUT) != GPS_MANAGER_ERROR_NO_ERROR)
+            return;
 
     // we always pull data from the gps module
     _smart_delay(0);
@@ -133,4 +156,8 @@ void gps_manager_update() {
             ram_log_notify(RAM_LOG_INFO, str_log.c_str());
         }
     }
+}
+
+bool gps_manager_is_init() {
+    return flag_initialized;
 }
