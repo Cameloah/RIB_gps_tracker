@@ -130,12 +130,6 @@ void gps_manager_update() {
 
             if (interval_m > INTERVAL_DISTANCE_M) {
                 // we have passed a distance of x meters
-                String log = "Distanz zwischen " + String(gpsState.posLat) + ", " + String(gpsState.posLon) + " und " +
-                             String(gpsState.prevPosLat) + ", " + String(gpsState.prevPosLon) + ": " +
-                             String(interval_m) + ", Km: " + String(gpsState.milage_km);
-                ram_log_notify(RAM_LOG_INFO, log.c_str());
-                DualSerial.println(log.c_str());
-
                 // update previous position
                 gpsState.prevPosLat = gpsState.posLat;
                 gpsState.prevPosLon = gpsState.posLon;
