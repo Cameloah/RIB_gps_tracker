@@ -67,6 +67,7 @@ void gps_manager_init() {
 #ifdef SYS_CONTROL_SAVE_MILAGE
     // read milage from flash
     long readValue;
+    DualSerial.println(sizeof())
     EEPROM_readAnything(12, readValue);
     gpsState.milage_km = (double)readValue / 1000000;
 #endif
