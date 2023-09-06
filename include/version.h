@@ -6,7 +6,7 @@
 
 #define FW_VERSION_MAJOR                    2
 #define FW_VERSION_MINOR                    0
-#define FW_VERSION_PATCH                    2
+#define FW_VERSION_PATCH                    3
 
 // set the github user and source repo here "user/repo"
 #define GITHUB_REPO     "Cameloah/RIB_gps_tracker"

@@ -67,9 +67,8 @@ void gps_manager_init() {
 #ifdef SYS_CONTROL_SAVE_MILAGE
     // read milage from flash
     long readValue;
-    DualSerial.println(sizeof())
     EEPROM_readAnything(12, readValue);
-    gpsState.milage_km = (double)readValue / 1000000;
+    gpsState.milage_km = (double)readValue / 1000;
 #endif
 
     // initialize gps module
@@ -139,7 +138,7 @@ void gps_manager_update() {
                 gpsState.milage_km += interval_m / 1000.0;
 
 #ifdef SYS_CONTROL_SAVE_MILAGE
-                long writeValue = gpsState.milage_km * 1000000;
+                long writeValue = gpsState.milage_km * 1000;
                 EEPROM_writeAnything(12, writeValue);
                 EEPROM.commit(); // commit data to flash
 #endif

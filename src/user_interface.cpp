@@ -50,7 +50,7 @@ void ui_config() {
     else if (!strcmp(sub_key, "--km")) {
         char *sub_key = strtok(nullptr, " \n");
         gpsState.milage_km = atof(sub_key);
-        long writeValue = gpsState.milage_km * 1000000;
+        long writeValue = gpsState.milage_km * 1000;
         EEPROM_writeAnything(12, writeValue);
         EEPROM.commit(); // commit data to flash
 
