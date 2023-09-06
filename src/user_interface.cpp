@@ -73,7 +73,9 @@ String ui_info() {
     DualSerial.print("Aktueller km-Stand: "); DualSerial.println(gpsState.milage_km);
     String str_pos = "Aktuelle Position:  " + String(gpsState.posLat) + "° Nord, " + String(gpsState.posLon) + "° Ost";
     DualSerial.println(str_pos.c_str());
-    DualSerial.print("Anzahl Satelliten:  "); DualSerial.println(gpsState.numberSats);ram_log_print_log();
+    DualSerial.print("Anzahl Satelliten:  "); DualSerial.println(gpsState.numberSats);
+    DualSerial.print("Laufzeit: "); DualSerial.println(ram_log_time_str(millis()));
+    ram_log_print_log();
     return fw_version;
 }
 
