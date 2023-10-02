@@ -95,7 +95,7 @@ GPS_MANAGER_ERROR_t gps_module_init(unsigned long timeout) {
             return GPS_MANAGER_ERROR_NO_ERROR;
         }
         delay(100);
-    } while (millis() - timeout < start);
+    } while (millis() - start < timeout);
 
     return GPS_MANAGER_ERROR_TIMEOUT;
 }
