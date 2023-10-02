@@ -65,7 +65,7 @@ GPS_MANAGER_ERROR_t _update_pos(unsigned long timeout, uint8_t sats) {
 void gps_manager_init() {
     GPS_MANAGER_ERROR_t retval;
 
-#ifdef SYS_CONTROL_SAVE_MILAGE
+#ifdef SYS_CONTROL_SAVE_MILEAGE
     // read mileage from flash
     long readValue;
     EEPROM_readAnything(12, readValue);
@@ -111,7 +111,7 @@ void gps_manager_update() {
 
     // but we only check the current position periodically
     counter_gps_update++;
-    if (counter_gps_update * 1000 / FREQ_LOOP_CYCLE_HZ > INVERVAL_GPS_MEASURE_MS) {
+    if (counter_gps_update * 1000 / FREQ_LOOP_CYCLE_HZ > INTERVAL_GPS_MEASURE_MS) {
         counter_gps_update = 0;
 
         GPS_MANAGER_ERROR_t retval;
@@ -139,7 +139,7 @@ void gps_manager_update() {
                 // save to milage
                 gpsState.mileage_km += interval_m / 1000.0;
 
-#ifdef SYS_CONTROL_SAVE_MILAGE
+#ifdef SYS_CONTROL_SAVE_MILEAGE
                 long writeValue = (long) gpsState.mileage_km * 1000;
                 EEPROM_writeAnything(12, writeValue);
                 EEPROM.commit(); // commit data to flash
