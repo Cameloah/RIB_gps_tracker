@@ -65,7 +65,7 @@ void setup() {
     DualSerial.println("Einsatzbereit!");
 }
 
-// counting loop iterations to search for wifi
+// counting loop iterations to search for Wi-Fi
 double counter_wifi = 0;
 
 void loop() {
