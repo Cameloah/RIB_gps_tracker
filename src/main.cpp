@@ -15,7 +15,7 @@
 
 // display the current mileage on root
 void handleRoot(AsyncWebServerRequest *request) {
-    request->send(200, "text/html", String(gpsState.milage_km));
+    request->send(200, "text/html", String(gpsState.mileage_km));
 }
 
 
