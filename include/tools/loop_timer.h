@@ -10,7 +10,7 @@ extern uint64_t t_0;
 ///        loop_timer is updated every loop iteration
 /// \return loop frequency
 ///
-float loop_timer_get_loop_freq();
+double loop_timer_get_loop_freq();
 
 /// \brief measures loop cycle time and adds delay 
 ///        if necessary to meet predefined FREQ_LOOP_CYCLE_HZ
