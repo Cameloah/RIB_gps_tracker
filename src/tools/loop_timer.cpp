@@ -8,7 +8,7 @@ uint64_t t_0                = 0;
 uint64_t t_end              = 0;
 
 
-float loop_timer_get_loop_freq() {
+double loop_timer_get_loop_freq() {
     loop_time = millis() - loop_timer_start;
     loop_time = loop_time / loop_timer;
     loop_timer = 0;

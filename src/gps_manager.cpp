@@ -10,20 +10,19 @@
 #include "ram_log.h"
 
 TinyGPSPlus gps_obj;
-HardwareSerial SerialGPS(1);
+HardwareSerial SerialGPS(1);                             // gps connected to UART 1
 bool flag_initialized = false;
 
-uint32_t counter_gps_update = 0;
+uint32_t counter_gps_update = 0;                                // counter of loopiterations without checking gps pos
 
 GpsDataState_t gpsState = {};
 
-// This custom version of delay() ensures that the gps object
-// is being "fed".
+// custom version of delay() ensures that the gps object is being updated.
 static void _smart_delay(unsigned long ms) {
     unsigned long start = millis();
     do {
         while (SerialGPS.available())
-            gps_obj.encode(SerialGPS.read());
+            gps_obj.encode((char) SerialGPS.read());
     } while (millis() - start < ms);
 }
 
@@ -32,13 +31,15 @@ GPS_MANAGER_ERROR_t _update_pos(unsigned long timeout, uint8_t sats) {
     do {
         // pull data
         while (SerialGPS.available())
-            gps_obj.encode(SerialGPS.read());
+            gps_obj.encode((char) SerialGPS.read());
 
         // check for satellites
         if (gps_obj.satellites.isValid() && sats <= gps_obj.satellites.value()) {
             // notify ramlog
             if (sats > gpsState.numberSats) {
-                String str_log = "Satelliten-Genauigkeit hergestellt. Satelliten: " + String(gps_obj.satellites.value());
+                String str_log =
+                        "Satelliten-Genauigkeit hergestellt. Satelliten: " + String(gps_obj.satellites.value());
+                ram_log_notify(RAM_LOG_INFO, str_log.c_str(), true);
             }
 
             // update number of satellites
@@ -49,7 +50,7 @@ GPS_MANAGER_ERROR_t _update_pos(unsigned long timeout, uint8_t sats) {
                 // measurement is valid and fresh, therefore save position
                 gpsState.posLat = gps_obj.location.lat();
                 gpsState.posLon = gps_obj.location.lng();
-                // all done, so return out of loop
+                // all done, so return
                 return GPS_MANAGER_ERROR_NO_ERROR;
             }
         }
@@ -62,23 +63,24 @@ GPS_MANAGER_ERROR_t _update_pos(unsigned long timeout, uint8_t sats) {
 
 
 void gps_manager_init() {
-    GPS_MANAGER_ERROR_t retval = GPS_MANAGER_ERROR_UNKNOWN;
+    GPS_MANAGER_ERROR_t retval;
 
-#ifdef SYS_CONTROL_SAVE_MILAGE
-    // read milage from flash
+#ifdef SYS_CONTROL_SAVE_MILEAGE
+    // read mileage from flash
     long readValue;
     EEPROM_readAnything(12, readValue);
-    gpsState.milage_km = (double)readValue / 1000;
+    gpsState.mileage_km = (double) readValue / 1000;
 #endif
 
     // initialize gps module
     DualSerial.println("Initialisiere GPS-Modul...");
-    if((retval = gps_module_init(GPS_INIT_TIMEOUT)) == GPS_MANAGER_ERROR_NO_ERROR)
+    if ((retval = gps_module_init(GPS_INIT_TIMEOUT)) == GPS_MANAGER_ERROR_NO_ERROR)
         flag_initialized = true;
 
     else {
         DualSerial.println("Fehler. GPS-Modul antwortet nicht. Neuversuch laeuft im Hintergrund.");
-        ram_log_notify(RAM_LOG_ERROR_GPS_MANAGER, retval); }
+        ram_log_notify(RAM_LOG_ERROR_GPS_MANAGER, retval);
+    }
 }
 
 GPS_MANAGER_ERROR_t gps_module_init(unsigned long timeout) {
@@ -88,12 +90,12 @@ GPS_MANAGER_ERROR_t gps_module_init(unsigned long timeout) {
     unsigned long start = millis();
     do {
         if (SerialGPS.available()) {
-            ram_log_notify( RAM_LOG_INFO,"GPS online.", true);
+            ram_log_notify(RAM_LOG_INFO, "GPS online.", true);
             flag_initialized = true;
             return GPS_MANAGER_ERROR_NO_ERROR;
         }
         delay(100);
-    } while (millis() - timeout < start);
+    } while (millis() - start < timeout);
 
     return GPS_MANAGER_ERROR_TIMEOUT;
 }
@@ -109,7 +111,7 @@ void gps_manager_update() {
 
     // but we only check the current position periodically
     counter_gps_update++;
-    if (counter_gps_update * 1000 / FREQ_LOOP_CYCLE_HZ > INVERVAL_GPS_MEASURE_MS) {
+    if (counter_gps_update * 1000 / FREQ_LOOP_CYCLE_HZ > INTERVAL_GPS_MEASURE_MS) {
         counter_gps_update = 0;
 
         GPS_MANAGER_ERROR_t retval;
@@ -135,17 +137,15 @@ void gps_manager_update() {
                 gpsState.prevPosLon = gpsState.posLon;
 
                 // save to milage
-                gpsState.milage_km += interval_m / 1000.0;
+                gpsState.mileage_km += interval_m / 1000.0;
 
-#ifdef SYS_CONTROL_SAVE_MILAGE
-                long writeValue = gpsState.milage_km * 1000;
+#ifdef SYS_CONTROL_SAVE_MILEAGE
+                long writeValue = (long) gpsState.mileage_km * 1000;
                 EEPROM_writeAnything(12, writeValue);
                 EEPROM.commit(); // commit data to flash
 #endif
             }
-        }
-
-        else if (retval == GPS_MANAGER_ERROR_SATS) {
+        } else if (retval == GPS_MANAGER_ERROR_SATS) {
             String str_log = "Satelliten-Genauigkeit verloren. Satelliten: " + String(gpsState.numberSats);
             ram_log_notify(RAM_LOG_INFO, str_log.c_str());
         }

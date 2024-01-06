@@ -1,5 +1,5 @@
 //
-// Created by Camleoah on 29/10/2022.
+// Created by Cameloah on 29/10/2022.
 //
 
 #pragma once
@@ -7,7 +7,7 @@
 #include "EEPROM.h"
 
 
-#define SYS_CONTROL_SAVE_MILAGE
+#define SYS_CONTROL_SAVE_MILEAGE
 
 #define EEPROM_SIZE                     128
 #define GPS_SERIAL_BAUD_RATE            9600
@@ -18,7 +18,7 @@
 #define GPS_INIT_TIMEOUT                5000
 
 #define INTERVAL_DISTANCE_M             200
-#define INVERVAL_GPS_MEASURE_MS         5000
+#define INTERVAL_GPS_MEASURE_MS         5000
 
 typedef enum{
     GPS_MANAGER_ERROR_NO_ERROR          = 0x00,
@@ -33,7 +33,7 @@ struct GpsDataState_t {
     double posLon = 0;
     double prevPosLat = 0;
     double prevPosLon = 0;
-    double milage_km = 0;
+    double mileage_km = 0;
     uint8_t numberSats = 0;
 };
 
