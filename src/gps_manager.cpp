@@ -6,8 +6,13 @@
 #include "HardwareSerial.h"
 #include "gps_manager.h"
 #include "tools/loop_timer.h"
-#include "wifi_handler.h"
 #include "ram_log.h"
+#include "main_project_utils.h"
+#include "memory_module.h"
+
+
+MemoryModule gps_parameters;
+
 
 TinyGPSPlus gps_obj;
 HardwareSerial SerialGPS(1);                             // gps connected to UART 1
@@ -55,21 +60,30 @@ GPS_MANAGER_ERROR_t _update_pos(unsigned long timeout, uint8_t sats) {
             }
         }
     } while (millis() - start < timeout);
-    // we timeouted. the position measurement is not valid
+    // we timed out. the position measurement is not valid
     if (gpsState.numberSats < sats)
         return GPS_MANAGER_ERROR_SATS;
     return GPS_MANAGER_ERROR_LOCATION;
 }
 
+bool check_within_circle(double x, double y, double x_center, double y_center, double radius) {
+    double distance = sqrt(pow(x - x_center, 2) + pow(y - y_center, 2));
+    return distance <= radius;
+}
 
 void gps_manager_init() {
     GPS_MANAGER_ERROR_t retval;
+    memset(&gpsState, 0, sizeof(GpsDataState_t));
+
+    pinMode(PIN_ALARM, OUTPUT);
+
+    gps_parameters.addParameter("mileage_km", (double) 0);
+    gps_parameters.loadAllStrict();
+
 
 #ifdef SYS_CONTROL_SAVE_MILEAGE
     // read mileage from flash
-    long readValue;
-    EEPROM_readAnything(12, readValue);
-    gpsState.mileage_km = (double) readValue / 1000;
+    gpsState.mileage_km = (double) *gps_parameters.getDouble("mileage_km");
 #endif
 
     // initialize gps module
@@ -130,6 +144,9 @@ void gps_manager_update() {
             double interval_m = TinyGPSPlus::distanceBetween(gpsState.posLat, gpsState.posLon, gpsState.prevPosLat,
                                                              gpsState.prevPosLon);
 
+            gpsState.speed_kmh = gps_obj.speed.kmph();
+
+
             if (interval_m > INTERVAL_DISTANCE_M) {
                 // we have passed a distance of x meters
                 // update previous position
@@ -140,9 +157,7 @@ void gps_manager_update() {
                 gpsState.mileage_km += interval_m / 1000.0;
 
 #ifdef SYS_CONTROL_SAVE_MILEAGE
-                long writeValue = (long) gpsState.mileage_km * 1000;
-                EEPROM_writeAnything(12, writeValue);
-                EEPROM.commit(); // commit data to flash
+                gps_parameters.set("mileage_km", gpsState.mileage_km, true);
 #endif
             }
         } else if (retval == GPS_MANAGER_ERROR_SATS) {
@@ -150,6 +165,20 @@ void gps_manager_update() {
             ram_log_notify(RAM_LOG_INFO, str_log.c_str());
         }
     }
+
+    if (gpsState.speed_kmh > SPEED_LIMIT_HABOUR && 
+        check_within_circle(gpsState.posLat, gpsState.posLon,
+                            LAT_ANKLAM_CENTER, LON_ANKLAM_CENTER,
+                            RADIUS_ANKLAM_CENTER)) {
+        if(millis() / 1000 % 2 == 0) {
+            digitalWrite(PIN_ALARM, LOW);
+            }
+        else
+            digitalWrite(PIN_ALARM, HIGH);
+    }
+
+    else
+        digitalWrite(PIN_ALARM, HIGH);
 }
 
 bool gps_manager_is_init() {
