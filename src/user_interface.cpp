@@ -11,7 +11,8 @@ void ui_error() {
 
 void ui_config_help() {
     DualSerial.print("konfiguriere --ip [ip-adresse]      - ändern der gespeicherten IP-Adresse\n"
-                     "konfiguriere --km [wert]            - ändern des gespeicherten km-Standes\n\n");
+                     "konfiguriere --km [wert]            - ändern des gespeicherten km-Standes\n"
+                     "konfiguriere --alarm [0/1]          - aktivieren/deaktivieren des Geschwindigkeitsalarms\n\n");
 }
 
 void ui_config() {
@@ -51,6 +52,19 @@ void ui_config() {
         gps_parameters.set("mileage_km", (double) atof(sub_key), true);
 
         DualSerial.println("Speichere neuen Kilometerstand...");
+        return;
+    } 
+
+    else if (!strcmp(sub_key, "--alarm")) {
+        sub_key = strtok(nullptr, " \n");
+        if (sub_key == nullptr) {
+            DualSerial.println("Fehler.");
+            return;
+        }
+
+        gps_parameters.set("speedlimit_on", (bool) atoi(sub_key), true);
+
+        DualSerial.println("Geschwindigkeitsalarm: " + String((bool) atoi(sub_key)) + "...");
         return;
     } 
     

@@ -78,7 +78,8 @@ void gps_manager_init() {
     pinMode(PIN_ALARM, OUTPUT);
 
     gps_parameters.addParameter("mileage_km", (double) 0);
-    gps_parameters.loadAllStrict();
+    gps_parameters.addParameter("speedlimit_on", (bool) false);
+    gps_parameters.loadAll();
 
 
 #ifdef SYS_CONTROL_SAVE_MILEAGE
@@ -115,6 +116,23 @@ GPS_MANAGER_ERROR_t gps_module_init(unsigned long timeout) {
 }
 
 void gps_manager_update() {
+    // the alarm needs priority
+    if (*gps_parameters.getBool("speedlimit_on") &&
+        gpsState.speed_kmh > SPEED_LIMIT_HABOUR && 
+        check_within_circle(gpsState.posLat, gpsState.posLon,
+                            LAT_ANKLAM_CENTER, LON_ANKLAM_CENTER,
+                            RADIUS_ANKLAM_CENTER)) {
+        if(millis() / 1000 % 2 == 0)
+            digitalWrite(PIN_ALARM, LOW);
+        else
+            digitalWrite(PIN_ALARM, HIGH);
+    }
+
+    else digitalWrite(PIN_ALARM, HIGH);
+
+    // reset speed incase we get invalid measurements
+    gpsState.speed_kmh = 0;
+
     // if not initialized, try again
     if (!flag_initialized)
         if (gps_module_init(GPS_INIT_TIMEOUT) != GPS_MANAGER_ERROR_NO_ERROR)
@@ -160,25 +178,13 @@ void gps_manager_update() {
                 gps_parameters.set("mileage_km", gpsState.mileage_km, true);
 #endif
             }
-        } else if (retval == GPS_MANAGER_ERROR_SATS) {
+        } 
+        
+        else if (retval == GPS_MANAGER_ERROR_SATS) {
             String str_log = "Satelliten-Genauigkeit verloren. Satelliten: " + String(gpsState.numberSats);
             ram_log_notify(RAM_LOG_INFO, str_log.c_str());
         }
     }
-
-    if (gpsState.speed_kmh > SPEED_LIMIT_HABOUR && 
-        check_within_circle(gpsState.posLat, gpsState.posLon,
-                            LAT_ANKLAM_CENTER, LON_ANKLAM_CENTER,
-                            RADIUS_ANKLAM_CENTER)) {
-        if(millis() / 1000 % 2 == 0) {
-            digitalWrite(PIN_ALARM, LOW);
-            }
-        else
-            digitalWrite(PIN_ALARM, HIGH);
-    }
-
-    else
-        digitalWrite(PIN_ALARM, HIGH);
 }
 
 bool gps_manager_is_init() {
