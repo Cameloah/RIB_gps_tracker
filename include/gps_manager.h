@@ -20,7 +20,7 @@
 #define INTERVAL_DISTANCE_M             200
 #define INTERVAL_GPS_MEASURE_MS         2000
 
-#define SPEED_LIMIT_HABOUR              10
+#define SPEED_LIMIT_HABOUR              6
 #define LAT_ANKLAM_CENTER               53.858735
 #define LON_ANKLAM_CENTER               13.685272
 #define RADIUS_ANKLAM_CENTER            0.011953

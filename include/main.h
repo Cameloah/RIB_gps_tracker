@@ -14,7 +14,7 @@
 #define SYSCTRL_LOOPTIMER               // enable loop frequency control, remember to also set the loop freq in the loop_timer.h
 #define INTERVAL_WIFI_CHECK_MS          60000  // how often we search for Wi-Fi
 
-// #define SYS_CONTROL_STAT_IP
+#define SYS_CONTROL_STAT_IP
 #define SYS_CONTROL_WEBSERIAL
 
 // set this to any password to protect the AP

@@ -17,6 +17,8 @@ MemoryModule gps_parameters;
 TinyGPSPlus gps_obj;
 HardwareSerial SerialGPS(1);                             // gps connected to UART 1
 bool flag_initialized = false;
+bool flag_satellite_fix = true;
+bool flag_toofast = false;
 
 uint32_t counter_gps_update = 0;                                // counter of loopiterations without checking gps pos
 
@@ -122,13 +124,22 @@ void gps_manager_update() {
         check_within_circle(gpsState.posLat, gpsState.posLon,
                             LAT_ANKLAM_CENTER, LON_ANKLAM_CENTER,
                             RADIUS_ANKLAM_CENTER)) {
+        // too fast!
+        if (!flag_toofast) {
+            ram_log_notify(RAM_LOG_INFO, "Geschwindigkeitsalarm ausgelöst.", true);
+            flag_toofast = true;
+        }
+
         if(millis() / 1000 % 2 == 0)
-            digitalWrite(PIN_ALARM, LOW);
-        else
             digitalWrite(PIN_ALARM, HIGH);
+        else
+            digitalWrite(PIN_ALARM, LOW);
     }
 
-    else digitalWrite(PIN_ALARM, HIGH);
+    else {
+        digitalWrite(PIN_ALARM, LOW);
+        flag_toofast = false;
+    }
 
     // reset speed incase we get invalid measurements
     gpsState.speed_kmh = 0;
@@ -178,11 +189,15 @@ void gps_manager_update() {
                 gps_parameters.set("mileage_km", gpsState.mileage_km, true);
 #endif
             }
+
+            // set flag
+            flag_satellite_fix = true;
         } 
         
-        else if (retval == GPS_MANAGER_ERROR_SATS) {
+        else if (retval == GPS_MANAGER_ERROR_SATS && flag_satellite_fix) {
             String str_log = "Satelliten-Genauigkeit verloren. Satelliten: " + String(gpsState.numberSats);
             ram_log_notify(RAM_LOG_INFO, str_log.c_str());
+            flag_satellite_fix = false;
         }
     }
 }
