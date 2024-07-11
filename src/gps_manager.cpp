@@ -34,6 +34,7 @@ static void _smart_delay(unsigned long ms) {
 }
 
 GPS_MANAGER_ERROR_t _update_pos(unsigned long timeout, uint8_t sats) {
+
     unsigned long start = millis();
     do {
         // pull data
@@ -71,6 +72,13 @@ GPS_MANAGER_ERROR_t _update_pos(unsigned long timeout, uint8_t sats) {
 bool check_within_circle(double x, double y, double x_center, double y_center, double radius) {
     double distance = sqrt(pow(x - x_center, 2) + pow(y - y_center, 2));
     return distance <= radius;
+}
+
+bool check_between_points(double x, double y, double x1, double y1, double x2, double y2) {
+    double center_x = (x1 + x2) / 2;
+    double center_y = (y1 + y2) / 2;
+    double distance = sqrt(pow(x - center_x, 2) + pow(y - center_y, 2));
+    return distance <= sqrt(pow(x1 - center_x, 2) + pow(y1 - center_y, 2));
 }
 
 void gps_manager_init() {
@@ -119,35 +127,55 @@ GPS_MANAGER_ERROR_t gps_module_init(unsigned long timeout) {
 
 void gps_manager_update() {
     // the alarm needs priority
-    if (*gps_parameters.getBool("speedlimit_on") &&
-        gpsState.speed_kmh > SPEED_LIMIT_HABOUR && 
-        check_within_circle(gpsState.posLat, gpsState.posLon,
-                            LAT_ANKLAM_CENTER, LON_ANKLAM_CENTER,
-                            RADIUS_ANKLAM_CENTER)) {
+
+    if (gpsState.speed_kmh > SPEED_LIMIT_HABOUR &&
+             check_between_points(gpsState.posLat, gpsState.posLon,
+                                  LAT_ANKLAM_WEST, LON_ANKLAM_WEST,
+                                  LAT_ANKLAM_EAST, LON_ANKLAM_EAST)) {
         // too fast!
         if (!flag_toofast) {
-            ram_log_notify(RAM_LOG_INFO, "Geschwindigkeitsalarm ausgelöst.", true);
+            ram_log_notify(RAM_LOG_INFO, "Geschwindigkeitsüberschreitung in Anklam.", true);
             flag_toofast = true;
         }
+    }
 
-        if(millis() / 1000 % 2 == 0)
+    else if (gpsState.speed_kmh > SPEED_LIMIT_HABOUR &&
+             check_between_points(gpsState.posLat, gpsState.posLon,
+                                  LAT_SEESPORTCLUB_WEST, LON_SEESPORTCLUB_WEST,
+                                  LAT_SEESPORTCLUB_EAST, LON_SEESPORTCLUB_EAST)) {
+        // too fast!
+        if (!flag_toofast) {
+            ram_log_notify(RAM_LOG_INFO, "Geschwindigkeitsüberschreitung beim Seesportclub.", true);
+            flag_toofast = true;
+        }
+    }
+
+    else {
+        flag_toofast = false;
+    }
+
+
+
+    if (*gps_parameters.getBool("speedlimit_on") && flag_toofast && flag_initialized) {
+        if(millis() / 1000 % 2 == 0) {
             digitalWrite(PIN_ALARM, HIGH);
+            delay(100);
+            digitalWrite(PIN_ALARM, LOW);
+            }
         else
             digitalWrite(PIN_ALARM, LOW);
     }
 
     else {
         digitalWrite(PIN_ALARM, LOW);
-        flag_toofast = false;
     }
 
-    // reset speed incase we get invalid measurements
-    gpsState.speed_kmh = 0;
 
     // if not initialized, try again
     if (!flag_initialized)
         if (gps_module_init(GPS_INIT_TIMEOUT) != GPS_MANAGER_ERROR_NO_ERROR)
             return;
+
 
     // we always pull data from the gps module
     _smart_delay(0);
@@ -160,6 +188,7 @@ void gps_manager_update() {
         GPS_MANAGER_ERROR_t retval;
         // read gps coordinates from module
         if ((retval = _update_pos(5000, 4)) == GPS_MANAGER_ERROR_NO_ERROR) {
+
             // we have a valid measurement so lets check whether we have a previous measurement
             if (gpsState.prevPosLat == 0 || gpsState.prevPosLon == 0) {
                 // we don't have prev measurements yet so lets save them
@@ -198,7 +227,12 @@ void gps_manager_update() {
             String str_log = "Satelliten-Genauigkeit verloren. Satelliten: " + String(gpsState.numberSats);
             ram_log_notify(RAM_LOG_INFO, str_log.c_str());
             flag_satellite_fix = false;
+
+            // reset speed incase we get invalid measurements
+            gpsState.speed_kmh = 0;
         }
+        
+        else gpsState.speed_kmh = 0;
     }
 }
 
