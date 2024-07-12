@@ -178,10 +178,9 @@ void gps_manager_update() {
                 }
 
                 flag_alarm = true;
-            }
-            
-            
-            }
+            }  
+        }
+        
         else
             flag_alarm = false;
     }
