@@ -19,6 +19,7 @@ HardwareSerial SerialGPS(1);                             // gps connected to UAR
 bool flag_initialized = false;
 bool flag_satellite_fix = true;
 bool flag_toofast = false;
+bool flag_alarm = false;
 
 uint32_t counter_gps_update = 0;                                // counter of loopiterations without checking gps pos
 
@@ -126,8 +127,8 @@ GPS_MANAGER_ERROR_t gps_module_init(unsigned long timeout) {
 }
 
 void gps_manager_update() {
-    // the alarm needs priority
 
+    // the alarm needs priority
     if (gpsState.speed_kmh > SPEED_LIMIT_HABOUR &&
              check_between_points(gpsState.posLat, gpsState.posLon,
                                   LAT_ANKLAM_WEST, LON_ANKLAM_WEST,
@@ -154,22 +155,36 @@ void gps_manager_update() {
         flag_toofast = false;
     }
 
-
-
+    // if speedlimit is on and we are too fast, we alarm
     if (*gps_parameters.getBool("speedlimit_on") && flag_toofast && flag_initialized) {
         if(millis() / 1000 % 2 == 0) {
-            digitalWrite(PIN_ALARM, HIGH);
-            delay(100);
-            digitalWrite(PIN_ALARM, LOW);
+            if (flag_alarm == false)
+            {
+                int beeps = gpsState.speed_kmh - SPEED_LIMIT_HABOUR;
+                
+                // if speed is too high, harsher alarm
+                if (beeps > 3) {
+                    digitalWrite(PIN_ALARM, HIGH);
+                    delay(1000);
+                    digitalWrite(PIN_ALARM, LOW);
+                }
+
+                // else we beep the amount of km/h over the limit
+                else for (int i = 0; i < beeps; i++) {
+                    digitalWrite(PIN_ALARM, HIGH);
+                    delay(150);
+                    digitalWrite(PIN_ALARM, LOW);
+                    delay(150);
+                }
+
+                flag_alarm = true;
+            }
+            
+            
             }
         else
-            digitalWrite(PIN_ALARM, LOW);
+            flag_alarm = false;
     }
-
-    else {
-        digitalWrite(PIN_ALARM, LOW);
-    }
-
 
     // if not initialized, try again
     if (!flag_initialized)
