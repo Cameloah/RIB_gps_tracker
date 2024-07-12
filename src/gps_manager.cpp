@@ -6,12 +6,20 @@
 #include "HardwareSerial.h"
 #include "gps_manager.h"
 #include "tools/loop_timer.h"
-#include "wifi_handler.h"
 #include "ram_log.h"
+#include "main_project_utils.h"
+#include "memory_module.h"
+
+
+MemoryModule gps_parameters;
+
 
 TinyGPSPlus gps_obj;
 HardwareSerial SerialGPS(1);                             // gps connected to UART 1
 bool flag_initialized = false;
+bool flag_satellite_fix = true;
+bool flag_toofast = false;
+bool flag_alarm = false;
 
 uint32_t counter_gps_update = 0;                                // counter of loopiterations without checking gps pos
 
@@ -27,6 +35,7 @@ static void _smart_delay(unsigned long ms) {
 }
 
 GPS_MANAGER_ERROR_t _update_pos(unsigned long timeout, uint8_t sats) {
+
     unsigned long start = millis();
     do {
         // pull data
@@ -55,21 +64,38 @@ GPS_MANAGER_ERROR_t _update_pos(unsigned long timeout, uint8_t sats) {
             }
         }
     } while (millis() - start < timeout);
-    // we timeouted. the position measurement is not valid
+    // we timed out. the position measurement is not valid
     if (gpsState.numberSats < sats)
         return GPS_MANAGER_ERROR_SATS;
     return GPS_MANAGER_ERROR_LOCATION;
 }
 
+bool check_within_circle(double x, double y, double x_center, double y_center, double radius) {
+    double distance = sqrt(pow(x - x_center, 2) + pow(y - y_center, 2));
+    return distance <= radius;
+}
+
+bool check_between_points(double x, double y, double x1, double y1, double x2, double y2) {
+    double center_x = (x1 + x2) / 2;
+    double center_y = (y1 + y2) / 2;
+    double distance = sqrt(pow(x - center_x, 2) + pow(y - center_y, 2));
+    return distance <= sqrt(pow(x1 - center_x, 2) + pow(y1 - center_y, 2));
+}
 
 void gps_manager_init() {
     GPS_MANAGER_ERROR_t retval;
+    memset(&gpsState, 0, sizeof(GpsDataState_t));
+
+    pinMode(PIN_ALARM, OUTPUT);
+
+    gps_parameters.addParameter("mileage_km", (double) 0);
+    gps_parameters.addParameter("speedlimit_on", (bool) false);
+    gps_parameters.loadAll();
+
 
 #ifdef SYS_CONTROL_SAVE_MILEAGE
     // read mileage from flash
-    long readValue;
-    EEPROM_readAnything(12, readValue);
-    gpsState.mileage_km = (double) readValue / 1000;
+    gpsState.mileage_km = (double) *gps_parameters.getDouble("mileage_km");
 #endif
 
     // initialize gps module
@@ -101,10 +127,69 @@ GPS_MANAGER_ERROR_t gps_module_init(unsigned long timeout) {
 }
 
 void gps_manager_update() {
+
+    // the alarm needs priority
+    if (gpsState.speed_kmh > SPEED_LIMIT_HABOUR &&
+             check_between_points(gpsState.posLat, gpsState.posLon,
+                                  LAT_ANKLAM_WEST, LON_ANKLAM_WEST,
+                                  LAT_ANKLAM_EAST, LON_ANKLAM_EAST)) {
+        // too fast!
+        if (!flag_toofast) {
+            ram_log_notify(RAM_LOG_INFO, "Geschwindigkeitsüberschreitung in Anklam.", true);
+            flag_toofast = true;
+        }
+    }
+
+    else if (gpsState.speed_kmh > SPEED_LIMIT_HABOUR &&
+             check_between_points(gpsState.posLat, gpsState.posLon,
+                                  LAT_SEESPORTCLUB_WEST, LON_SEESPORTCLUB_WEST,
+                                  LAT_SEESPORTCLUB_EAST, LON_SEESPORTCLUB_EAST)) {
+        // too fast!
+        if (!flag_toofast) {
+            ram_log_notify(RAM_LOG_INFO, "Geschwindigkeitsüberschreitung beim Seesportclub.", true);
+            flag_toofast = true;
+        }
+    }
+
+    else {
+        flag_toofast = false;
+    }
+
+    // if speedlimit is on and we are too fast, we alarm
+    if (*gps_parameters.getBool("speedlimit_on") && flag_toofast && flag_initialized) {
+        if(millis() / 1000 % 2 == 0) {
+            if (flag_alarm == false)
+            {
+                int beeps = gpsState.speed_kmh - SPEED_LIMIT_HABOUR;
+                
+                // if speed is too high, harsher alarm
+                if (beeps > 3) {
+                    digitalWrite(PIN_ALARM, HIGH);
+                    delay(1000);
+                    digitalWrite(PIN_ALARM, LOW);
+                }
+
+                // else we beep the amount of km/h over the limit
+                else for (int i = 0; i < beeps; i++) {
+                    digitalWrite(PIN_ALARM, HIGH);
+                    delay(150);
+                    digitalWrite(PIN_ALARM, LOW);
+                    delay(150);
+                }
+
+                flag_alarm = true;
+            }  
+        }
+        
+        else
+            flag_alarm = false;
+    }
+
     // if not initialized, try again
     if (!flag_initialized)
         if (gps_module_init(GPS_INIT_TIMEOUT) != GPS_MANAGER_ERROR_NO_ERROR)
             return;
+
 
     // we always pull data from the gps module
     _smart_delay(0);
@@ -117,6 +202,7 @@ void gps_manager_update() {
         GPS_MANAGER_ERROR_t retval;
         // read gps coordinates from module
         if ((retval = _update_pos(5000, 4)) == GPS_MANAGER_ERROR_NO_ERROR) {
+
             // we have a valid measurement so lets check whether we have a previous measurement
             if (gpsState.prevPosLat == 0 || gpsState.prevPosLon == 0) {
                 // we don't have prev measurements yet so lets save them
@@ -130,6 +216,9 @@ void gps_manager_update() {
             double interval_m = TinyGPSPlus::distanceBetween(gpsState.posLat, gpsState.posLon, gpsState.prevPosLat,
                                                              gpsState.prevPosLon);
 
+            gpsState.speed_kmh = gps_obj.speed.kmph();
+
+
             if (interval_m > INTERVAL_DISTANCE_M) {
                 // we have passed a distance of x meters
                 // update previous position
@@ -140,15 +229,24 @@ void gps_manager_update() {
                 gpsState.mileage_km += interval_m / 1000.0;
 
 #ifdef SYS_CONTROL_SAVE_MILEAGE
-                long writeValue = (long) gpsState.mileage_km * 1000;
-                EEPROM_writeAnything(12, writeValue);
-                EEPROM.commit(); // commit data to flash
+                gps_parameters.set("mileage_km", gpsState.mileage_km, true);
 #endif
             }
-        } else if (retval == GPS_MANAGER_ERROR_SATS) {
+
+            // set flag
+            flag_satellite_fix = true;
+        } 
+        
+        else if (retval == GPS_MANAGER_ERROR_SATS && flag_satellite_fix) {
             String str_log = "Satelliten-Genauigkeit verloren. Satelliten: " + String(gpsState.numberSats);
             ram_log_notify(RAM_LOG_INFO, str_log.c_str());
+            flag_satellite_fix = false;
+
+            // reset speed incase we get invalid measurements
+            gpsState.speed_kmh = 0;
         }
+        
+        else gpsState.speed_kmh = 0;
     }
 }
 

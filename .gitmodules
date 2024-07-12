@@ -1,6 +1,6 @@
 [submodule "common_lib_wifi_debugger"]
 	path = common_lib_wifi_debugger
 	url = git@github.com:Cameloah/common_lib_wifi_debugger.git
-[submodule "lib/common_lib_wifi_debugger"]
-	path = lib/common_lib_wifi_debugger
-	url = git@github.com:Cameloah/common_lib_wifi_debugger.git
+[submodule "lib/ProjectUtils-esp32"]
+	path = lib/ProjectUtils-esp32
+	url = git@github.com:Cameloah/ProjectUtils-esp32.git

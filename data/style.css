@@ -1,3 +1,8 @@
+:root {
+  --border-radius: 10px;
+}
+
+
 html {
   font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;
   display: inline-block;
@@ -9,6 +14,12 @@ h1 {
   color: black;
 }
 
+h2 {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: black;
+}
+
 p {
   font-size: 1.4rem;
 }
@@ -16,6 +27,7 @@ p {
 .topnav {
   overflow: hidden;
   background-color: white;
+  padding: 2%;
 }
 
 body {
@@ -23,7 +35,7 @@ body {
 }
 
 .content {
-  padding: 5%;
+  padding: 0% 5%;
 }
 
 .card-grid {
@@ -36,7 +48,9 @@ body {
 
 .card {
   background-color: white;
-  box-shadow: 2px 2px 12px 1px rgba(140,140,140,.5);
+  box-shadow: 0 .46875rem 2.1875rem rgba(90, 97, 105, .1), 0 .9375rem 1.40625rem rgba(90, 97, 105, .1), 0 .25rem .53125rem rgba(90, 97, 105, .12), 0 .125rem .1875rem rgba(90, 97, 105, .1);
+  border-radius: var(--border-radius);
+  padding: 20px;
 }
 
 .card-title {
@@ -49,29 +63,35 @@ input[type=submit] {
   border: none;
   color: #FEFCFB;
   background-color: #007bff;
-  padding: 15px 15px;
+  padding: 12px 15px;
   text-align: center;
   text-decoration: none;
   display: inline-block;
   font-size: 16px;
   width: 100px;
-  margin-right: 10px;
-  border-radius: 4px;
+  border-radius: var(--border-radius);
   transition-duration: 0.4s;
 }
 
 input[type=submit]:hover {
   background-color: #1282A2;
+  cursor: pointer;
 }
 
 input[type=text], input[type=number], select {
-  width: 50%;
   padding: 12px 20px;
-  margin: 0 auto;
   display: block;
   border: 1px solid #ccc;
-  border-radius: 4px;
-  box-sizing: border-box;
+  border-radius: var(--border-radius);
+  width: auto;
+}
+
+input[type=password], input[type=number], select {
+  padding: 12px 20px;
+  display: block;
+  border: 1px solid #ccc;
+  border-radius: var(--border-radius);
+  width: auto;
 }
 
 label {
@@ -91,12 +111,20 @@ label {
 button {
   border: none;
   color: #FEFCFB;
-  padding: 15px 32px;
+  background-color: #007bff;
+  padding: 12px 15px;
   text-align: center;
+  text-decoration: none;
+  display: inline-block;
   font-size: 16px;
-  width: 100px;
-  border-radius: 4px;
+  width: auto;
+  border-radius: var(--border-radius);
   transition-duration: 0.4s;
+}
+
+button:hover {
+  background-color: #1282A2;
+  cursor: pointer;
 }
 
 .button-on {
@@ -115,45 +143,95 @@ button {
   background-color: #252524;
 }
 
-.burger-menu {
-  display: block;
+button.red {
+  background-color: rgb(173, 15, 15);
+}
+
+button.orange {
+  background-color: rgb(255, 196, 0);
+}
+
+button.green {
+  background-color: rgb(0, 155, 13);
+}
+
+.twocolumns {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  padding: 20px;
+  flex-wrap: wrap;
+}
+
+.setting_box {
+  display: flex;
+  align-items: center; /* Aligns items vertically in the middle */
+}
+
+.settings {
+  width: 75%;
+  margin: auto;
+}
+
+/* The switch - the box around the slider */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+
+/* Hide default HTML checkbox */
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* The slider */
+.slider {
+  position: absolute;
   cursor: pointer;
-  padding: 10px;
-  position: relative;
-  z-index: 1;
-}
-
-.burger-menu span {
-  display: block;
-  width: 25px;
-  height: 3px;
-  margin-bottom: 5px;
-  position: relative;
-  background: #000;
-  border-radius: 3px;
-  z-index: 2;
-}
-
-.menu {
-  position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0,0,0,0.8);
-  z-index: 1;
-  display: none;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
 }
 
-.menu ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
 }
 
-.menu li
+input:checked + .slider {
+  background-color: #007bff;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(26px);
+  -ms-transform: translateX(26px);
+  transform: translateX(26px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}

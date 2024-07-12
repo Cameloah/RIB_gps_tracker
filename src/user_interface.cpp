@@ -2,16 +2,8 @@
 // Created by Cameloah on 19.01.2022.
 //
 
-
-#include "Arduino.h"
-
 #include "user_interface.h"
-#include "gps_manager.h"
-#include "wifi_handler.h"
-#include "ram_log.h"
-#include "webserial_monitor.h"
-#include "version.h"
-#include "github_update.h"
+
 
 void ui_error() {
     DualSerial.print("\nUngültiger Befehl. Mindestens einer der folgenden Parameter fehlt:\n");
@@ -19,7 +11,8 @@ void ui_error() {
 
 void ui_config_help() {
     DualSerial.print("konfiguriere --ip [ip-adresse]      - ändern der gespeicherten IP-Adresse\n"
-                     "konfiguriere --km [wert]            - ändern des gespeicherten km-Standes\n\n");
+                     "konfiguriere --km [wert]            - ändern des gespeicherten km-Standes\n"
+                     "konfiguriere --alarm [0/1]          - aktivieren/deaktivieren des Geschwindigkeitsalarms\n\n");
 }
 
 void ui_config() {
@@ -33,62 +26,85 @@ void ui_config() {
 
     if (!strcmp(sub_key, "--ip")) {
 
-        uint8_t write_value_ip[4];
-
-        for (unsigned char &i: write_value_ip) {
-            sub_key = strtok(nullptr, ". \n");
-            if (sub_key == nullptr) {
-                DualSerial.println("Fehler.");
-                return;
-            }
-            DualSerial.print(i = atoi(sub_key));
-            DualSerial.println(" ");
+        sub_key = strtok(nullptr, "\n");
+        if (sub_key == nullptr) {
+            DualSerial.println("Fehler.");
+            return;
         }
-
-        for (int i = 0; i < 4; ++i) {
-            EEPROM_writeAnything(16 + i, write_value_ip[i]);
-        }
-        EEPROM.commit();
-        DualSerial.println("Speichere IP...");
+        
+        (wifi_config.set("localIP", String(sub_key), true));
+        
+        DualSerial.println("Speichere IP " + String(sub_key) + "...");
         DualSerial.println("Starte neu...");
         delay(1000);
         esp_restart();
-    } else if (!strcmp(sub_key, "--km")) {
+    } 
+    
+    else if (!strcmp(sub_key, "--km")) {
         sub_key = strtok(nullptr, " \n");
+        if (sub_key == nullptr) {
+            DualSerial.println("Fehler.");
+            return;
+        }
+
         gpsState.mileage_km = atof(sub_key);
-        long writeValue = (long) gpsState.mileage_km * 1000;
-        EEPROM_writeAnything(12, writeValue);
-        EEPROM.commit(); // commit data to flash
+        DualSerial.println(atof(sub_key));
+        gps_parameters.set("mileage_km", (double) atof(sub_key), true);
 
         DualSerial.println("Speichere neuen Kilometerstand...");
-    } else
-        ui_error();
+        return;
+    } 
+
+    else if (!strcmp(sub_key, "--alarm")) {
+        sub_key = strtok(nullptr, " \n");
+        if (sub_key == nullptr) {
+            DualSerial.println("Fehler.");
+            return;
+        }
+
+        gps_parameters.set("speedlimit_on", (bool) atoi(sub_key), true);
+
+        DualSerial.println("Geschwindigkeitsalarm: " + String((bool) atoi(sub_key)) + "...");
+        return;
+    } 
+    
+    else ui_error();
+
     ui_config_help();
 }
 
 void ui_info_help() {
-    DualSerial.println("info                            - Laufzeitinformationen über das Gerät");
+    DualSerial.println("info                                - Laufzeitinformationen über das Gerät");
 }
 
 String ui_info() {
-    String fw_version = "\nFirmware Version:   " + String(FW_VERSION_MAJOR) + "." + String(FW_VERSION_MINOR) + "." +
-                        String(FW_VERSION_PATCH);
-    DualSerial.println(fw_version.c_str());
-    DualSerial.print("Wlan Modus:         ");
-    DualSerial.println(wifi_handler_get_mode());
-    DualSerial.print("WLan verbunden:     ");
-    DualSerial.println(WiFi.isConnected() ? "ja" : "nein");
-    DualSerial.print("IP-Adresse:         ");
-    DualSerial.println(WiFi.localIP().toString());
-    DualSerial.print("Aktueller km-Stand: ");
-    DualSerial.println(gpsState.mileage_km);
-    String str_pos = "Aktuelle Position:  " + String(gpsState.posLat) + "° Nord, " + String(gpsState.posLon) + "° Ost";
-    DualSerial.println(str_pos.c_str());
-    DualSerial.print("Anzahl Satelliten:  ");
-    DualSerial.println(gpsState.numberSats);
-    DualSerial.print("Laufzeit: ");
-    DualSerial.println(ram_log_time_str(millis()));
+    String fw_version;
+    String info;
+
+    // Construct the firmware version string
+    fw_version += "\nFirmware-Version:      v"
+    + String(FW_VERSION_MAJOR) + "." + String(FW_VERSION_MINOR) + "." + String(FW_VERSION_PATCH) + "\n";
+
+    // get reset reason
+    String boot_msg = String(esp_reset_reason(), HEX);
+    if (boot_msg.length() == 1)
+        boot_msg = "0" + boot_msg;
+    boot_msg = "0x" + boot_msg;
+
+    // Append additional system information to the info string.
+    info = "Wlan Modus:            " + network_manager_get_mode() + "\n"
+    + "WLan verbunden:        " + (WiFi.isConnected() ? WiFi.SSID() : "not connected") + "\n"
+    + "IP-Adresse:            " + (WiFi.isConnected() ? WiFi.localIP().toString() : "") + "\n"
+    + "Aktueller km-Stand:    " + String(gpsState.mileage_km) + "\n"
+    + "Aktuelle Position:     " + String(gpsState.posLat) + "° Nord, " + String(gpsState.posLon) + "° Ost" + "\n"
+    + "Anzahl Satelliten:     " + String(gpsState.numberSats) + "\n"
+    + "Laufzeit:              " + ram_log_time_str(esp_timer_get_time()) + "\n"
+    + "Boot Nachicht:         " + boot_msg + "\n\n";
+
+    DualSerial.print(fw_version + info);
+
     ram_log_print_log();
+
     return fw_version;
 }
 
