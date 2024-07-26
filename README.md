@@ -4,7 +4,7 @@ A device that tracks driven kilometers and transmits these to a host once wifi i
 Features:
 - track kilometers in 200m intervals
 - check for WiFi periodically 
-- if home network available, spawn server wit driven km
+- if home network available, spawn server with driven km
 - sound alarm when driving too fast in geo-fenced area
 
 Hardware:
